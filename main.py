@@ -25,10 +25,17 @@ class ILPBuilder:
     def __init__(self):
         self.constraints = []
         self.variables = []
+        self.variable_bounds = {}
         self.objective = None
 
     def add_int_var(self, name):
         self.variables.append(name)
+
+    def add_int_var(self, name, lower, upper):
+        self.variables.append(name)
+        self.variable_bounds[name] = (lower, upper)
+        self.add_constraint(name + ' >= ' + str(lower))
+        self.add_constraint(name + ' <= ' + str(upper))
 
     def add_constraint(self, cst):
         self.constraints.append(cst)
@@ -63,20 +70,14 @@ class ILPBuilder:
 builder = ILPBuilder()
 
 # Resource assignment constraints
-builder.add_int_var("unit_p")
-builder.add_int_var("unit_c")
+builder.add_int_var("unit_p", 0, 1)
+builder.add_int_var("unit_c", 0, 1)
 
-builder.add_constraint("unit_p >= 0")
-builder.add_constraint("unit_c >= 0")
+builder.add_int_var("ii_p", 1, 100000)
+builder.add_int_var("ii_c", 1, 100000)
 
-builder.add_constraint("unit_p <= 1")
-builder.add_constraint("unit_c <= 1")
-
-builder.add_int_var("ii_p")
-builder.add_int_var("ii_c")
-
-builder.add_int_var("d_p")
-builder.add_int_var("d_c")
+builder.add_int_var("d_p", 0, 100000)
+builder.add_int_var("d_c", 0, 100000)
 
 h = sympify("3*ii_p + ii_c - 12 - 1 >= 0")
 h0 = sympify("ii_p >= 1")
