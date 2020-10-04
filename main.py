@@ -28,14 +28,17 @@ class ILPBuilder:
         self.variable_bounds = {}
         self.objective = None
 
-    def add_int_var(self, name):
-        self.variables.append(name)
-
-    def add_int_var(self, name, lower, upper):
+    def add_synonym(self, name, expr):
+        self.add_int_var(name)
+        self.add_constraint(name + ' = ' + expr)
+        
+    def add_int_var(self, name, lower=None, upper=None):
         self.variables.append(name)
         self.variable_bounds[name] = (lower, upper)
-        self.add_constraint(name + ' >= ' + str(lower))
-        self.add_constraint(name + ' <= ' + str(upper))
+        if (upper != None):
+            self.add_constraint(name + ' <= ' + str(upper))
+        if (lower != None):
+            self.add_constraint(name + ' >= ' + str(lower))
 
     def add_constraint(self, cst):
         self.constraints.append(cst)
@@ -72,6 +75,8 @@ builder = ILPBuilder()
 # Resource assignment constraints
 builder.add_int_var("unit_p", 0, 1)
 builder.add_int_var("unit_c", 0, 1)
+
+builder.add_synonym("neg_p_c_share", "unit_p - unit_c")
 
 builder.add_int_var("ii_p", 1, 100000)
 builder.add_int_var("ii_c", 1, 100000)
