@@ -83,6 +83,10 @@ class ILPBuilder:
 
 builder = ILPBuilder()
 
+# Iteration domains
+builder.add_int_var("p", 1, 10)
+builder.add_int_var("c", 1, 10)
+
 # Schedule parameters
 builder.add_int_var("ii_p", 1, 100000)
 builder.add_int_var("ii_c", 1, 100000)
