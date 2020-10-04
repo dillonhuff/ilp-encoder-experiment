@@ -28,6 +28,12 @@ class ILPBuilder:
         self.variable_bounds = {}
         self.objective = None
 
+    def lb(self, name):
+        return self.variable_bounds[name][0]
+
+    def ub(self, name):
+        return self.variable_bounds[name][1]
+
     def add_synonym(self, name, expr):
         self.add_int_var(name)
         self.add_constraint(name + ' = ' + expr)
@@ -77,24 +83,37 @@ class ILPBuilder:
 
 builder = ILPBuilder()
 
-# Resource assignment constraints
-builder.add_int_var("unit_p", 0, 1)
-builder.add_int_var("unit_c", 0, 1)
-
-# These indicator variables sum to zero iff
-# unit_p and unit_c are using the same functional unit
-builder.add_synonym("neg_p_c_share", "unit_p - unit_c")
-ub = 1
-builder.add_indicator("neg_p_c_share", ub)
-
-builder.add_synonym("neg_c_p_share", "unit_c - unit_p")
-builder.add_indicator("neg_c_p_share", ub)
-
+# Schedule parameters
 builder.add_int_var("ii_p", 1, 100000)
 builder.add_int_var("ii_c", 1, 100000)
 
 builder.add_int_var("d_p", 0, 100000)
 builder.add_int_var("d_c", 0, 100000)
+
+# Resource assignment constraints
+builder.add_int_var("unit_p", 0, 1)
+builder.add_int_var("unit_c", 0, 1)
+
+# These indicator variables sum to zero iff
+# p and c are using the same functional unit
+builder.add_synonym("neg_p_c_share", "unit_p - unit_c")
+ub = 1
+lb = -1
+builder.add_indicator("neg_p_c_share", ub)
+
+builder.add_synonym("neg_c_p_share", "-1*neg_p_c_share")
+builder.add_indicator("neg_c_p_share", -1*lb)
+
+# These indicator variables sum to zero
+# iff p and c are scheduled at the same time
+builder.add_synonym("neg_p_c_time", "ii_c*c + d_c - ii_p*p - d_p")
+ub = builder.ub("ii_c")*builder.ub("d_c")
+lb = builder.lb("ii_p")*builder.ub("d_p")
+
+builder.add_indicator("neg_p_c_time", ub)
+
+builder.add_synonym("neg_c_p_time", "-1*neg_p_c_time")
+builder.add_indicator("neg_c_p_time", -1*lb)
 
 h = sympify("3*ii_p + ii_c - 12 - 1 >= 0")
 
