@@ -46,6 +46,12 @@ class ILPBuilder:
     def set_objective(self, obj):
         self.objective = obj
 
+    def add_indicator(self, target, ub):
+        name = 'I_' + target
+        self.add_int_var(name, 0, 1)
+        self.add_constraint('{0} - {1}*{2} <= 0'.format(target, ub, name))
+        self.add_constraint('{0} - {1} <= 0'.format(target, name))
+
     def solve(self):
         problem = ''
         
@@ -76,7 +82,11 @@ builder = ILPBuilder()
 builder.add_int_var("unit_p", 0, 1)
 builder.add_int_var("unit_c", 0, 1)
 
+# This variable is 0 if p and c are scheduled on the
+# same unit.
 builder.add_synonym("neg_p_c_share", "unit_p - unit_c")
+ub = 1
+builder.add_indicator("neg_p_c_share", ub)
 
 builder.add_int_var("ii_p", 1, 100000)
 builder.add_int_var("ii_c", 1, 100000)
@@ -85,14 +95,8 @@ builder.add_int_var("d_p", 0, 100000)
 builder.add_int_var("d_c", 0, 100000)
 
 h = sympify("3*ii_p + ii_c - 12 - 1 >= 0")
-h0 = sympify("ii_p >= 1")
-h1 = sympify("ii_c >= 1")
 
 builder.set_objective('ii_p + ii_c')
-
-builder.add_constraint(h)
-builder.add_constraint(h0)
-builder.add_constraint(h1)
 
 builder.solve()
 
