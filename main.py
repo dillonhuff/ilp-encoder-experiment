@@ -11,10 +11,8 @@ def run_cmd(cmd):
     res = os.system(cmd)
     return res
 
-# run_cmd('{0} {1} {2}'.format(glpk_path, glpk_flags, 'assignment.mod'))
-
 def print_var(name):
-    return 'printf "{0}: %d\\n", {0};'.format(name)
+    return 'printf "{0}: %d\\n", {0};\n'.format(name)
 
 def add_int_var(name, model):
     return model + 'var {0}, integer;\n'.format(name)
@@ -22,51 +20,73 @@ def add_int_var(name, model):
 def add_constraint(name, cst, model):
     return model + 's.t. {0} : {1};\n'.format(name, cst)
 
-# sp = sympify("ii_p*p + d_p");
-# sc = sympify("ii_c*c + d_c");
+class ILPBuilder:
 
-# polytope = []
-# polytope.append(sympify('ii_p > 0'))
-# polytope.append(sympify('ii_c > 0'))
+    def __init__(self):
+        self.constraints = []
+        self.variables = []
+        self.objective = None
 
-# polytope.append(sympify('d_p >= 0'))
-# polytope.append(sympify('d_c >= 0'))
+    def add_int_var(self, name):
+        self.variables.append(name)
 
-# farkas_in = sc - sp >= 0
+    def add_constraint(self, cst):
+        self.constraints.append(cst)
 
-# resource_p = sympify('R_a == R_b >> S_p(p) != S_c(c)')
-# print(resource_p)
+    def set_objective(self, obj):
+        self.objective = obj
 
-# print('Farkas in:', farkas_in)
-# print(polytope)
+    def solve(self):
+        problem = ''
+        
+        i = 0
+        for v in self.variables:
+            problem = add_int_var(v, problem)
+            i += 1
 
-h = sympify("3*ii_x + ii_y - 12 - 1 >= 0")
-# print(h)
-# h = simplify(h)
-# print('Simplified:', h)
-# print('collected ;', collect(h, sympify('x')))
+        i = 0
+        for c in self.constraints:
+            problem = add_constraint('c{0}'.format(i), c, problem)
+            i += 1
 
-h0 = sympify("ii_x >= 1")
-h1 = sympify("ii_y >= 1")
+        problem += 'minimize obj : {0};\n'.format(self.objective)
+        problem += 'solve;\n'
 
-objective = 'ii_x + ii_y'
+        i = 0
+        for v in self.variables:
+            problem += print_var(v)
+            i += 1
+        problem_file = open('prob.mod', 'w').write(problem)
+        run_cmd('{0} {1} {2}'.format(glpk_path, glpk_flags, 'prob.mod'))
 
-problem = ''
-problem = add_int_var("ii_x", problem)
-problem = add_int_var("ii_y", problem)
 
-problem = add_constraint('c1', h, problem)
-problem = add_constraint('c2', h0, problem)
-problem = add_constraint('c3', h1, problem)
+builder = ILPBuilder()
 
-problem += 'solve;\n'
+# Resource assignment constraints
+builder.add_int_var("unit_p")
+builder.add_int_var("unit_c")
 
-problem += print_var('ii_x')
-problem += print_var('ii_y')
+builder.add_constraint("unit_p >= 0")
+builder.add_constraint("unit_c >= 0")
 
-print(problem)
-problem_file = open('prob.mod', 'w').write(problem)
+builder.add_constraint("unit_p <= 1")
+builder.add_constraint("unit_c <= 1")
 
-run_cmd('{0} {1} {2}'.format(glpk_path, glpk_flags, 'prob.mod'))
+builder.add_int_var("ii_p")
+builder.add_int_var("ii_c")
 
+builder.add_int_var("d_p")
+builder.add_int_var("d_c")
+
+h = sympify("3*ii_p + ii_c - 12 - 1 >= 0")
+h0 = sympify("ii_p >= 1")
+h1 = sympify("ii_c >= 1")
+
+builder.set_objective('ii_p + ii_c')
+
+builder.add_constraint(h)
+builder.add_constraint(h0)
+builder.add_constraint(h1)
+
+builder.solve()
 
