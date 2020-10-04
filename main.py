@@ -50,7 +50,7 @@ class ILPBuilder:
         name = 'I_' + target
         self.add_int_var(name, 0, 1)
         self.add_constraint('{0} - {1}*{2} <= 0'.format(target, ub, name))
-        self.add_constraint('{0} - {1} <= 0'.format(target, name))
+        self.add_constraint('{0} - {1} >= 0'.format(target, name))
 
     def solve(self):
         problem = ''
@@ -75,18 +75,20 @@ class ILPBuilder:
         problem_file = open('prob.mod', 'w').write(problem)
         run_cmd('{0} {1} {2}'.format(glpk_path, glpk_flags, 'prob.mod'))
 
-
 builder = ILPBuilder()
 
 # Resource assignment constraints
 builder.add_int_var("unit_p", 0, 1)
 builder.add_int_var("unit_c", 0, 1)
 
-# This variable is 0 if p and c are scheduled on the
-# same unit.
+# These indicator variables sum to zero iff
+# unit_p and unit_c are using the same functional unit
 builder.add_synonym("neg_p_c_share", "unit_p - unit_c")
 ub = 1
 builder.add_indicator("neg_p_c_share", ub)
+
+builder.add_synonym("neg_c_p_share", "unit_c - unit_p")
+builder.add_indicator("neg_c_p_share", ub)
 
 builder.add_int_var("ii_p", 1, 100000)
 builder.add_int_var("ii_c", 1, 100000)
