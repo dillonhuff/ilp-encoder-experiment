@@ -300,24 +300,11 @@ def add_farkas_constraints(fs, fc, domain, build):
     build.add_constraint_eqz(cst)
     return constraints
 
-# domain = Polyhedron()
-# domain.add_constraint({'c' : 1}, 0)
-# domain.add_constraint({'c' : -1}, 10)
-
-# domain.add_constraint({'p' : 1}, 0)
-# domain.add_constraint({'p' : -1}, 10)
-
-# print('Loop bounds')
-# print(domain)
-
 builder = ILPBuilder()
 builder.add_int_var('ii_c', 1, 100)
 builder.add_int_var('d_c', 0, 100)
 
 builder.objective = 'ii_c + d_c'
-
-# fs = { 'c' : 'ii_c', 'p' : '-2*ii_p'}
-# fc = 'd_c - d_p + 5'
 
 fs = { 'c' : 'ii_c'}
 fc = 'd_c + -20'
@@ -334,3 +321,37 @@ for s in sol:
     print('\t', s, '=', sol[s])
 assert(sol['ii_c'] == 1)
 assert(sol['d_c'] == 20)
+
+
+builder = ILPBuilder()
+builder.add_int_var('ii_c', 1, 100)
+builder.add_int_var('d_c', 0, 100)
+builder.add_int_var('ii_p', 1, 100)
+builder.add_int_var('d_p', 0, 100)
+
+builder.objective = 'ii_c + d_c + ii_p + d_c'
+
+fs = { 'c' : 'ii_c', 'p' : '-ii_p'}
+fc = 'd_c - d_p - 1'
+
+deps = Polyhedron()
+deps.add_constraint({'c' : 1}, 0)
+deps.add_constraint({'c' : -1}, 10)
+
+deps.add_constraint({'p' : 1}, 0)
+deps.add_constraint({'p' : -1}, 10)
+
+deps.add_constraint({'c' : 1, 'p' : -1}, 0)
+deps.add_constraint({'c' : -1, 'p' : 1}, 0)
+add_farkas_constraints(fs, fc, deps, builder)
+
+sol = builder.solve()
+print('II solution...')
+for s in sol:
+    print('\t', s, '=', sol[s])
+
+assert(sol['ii_c'] == 1)
+assert(sol['d_c'] == 1)
+
+assert(sol['ii_p'] == 1)
+assert(sol['d_p'] == 0)
