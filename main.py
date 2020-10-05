@@ -184,18 +184,21 @@ for s in sol:
 assert(sol['a'] == 0)
 assert(sol[na] == 1)
 
-builder = ILPBuilder()
-builder.add_int_var('a', 0, 1)
-builder.add_int_var('b', 0, 1)
-builder.add_constraint_eqz('a')
-builder.add_constraint_eqz('b')
-na = builder.conjoin(['a', 'b'])
-sol = builder.solve()
-for s in sol:
-    print('\t', s, '=', sol[s])
-assert(sol['a'] == 0)
-assert(sol['b'] == 0)
-assert(sol[na] == 0)
+and_tests = [[0, 0, 0], [0, 1, 0], [1, 0, 0], [1, 1, 1]]
+for t in and_tests:
+    builder = ILPBuilder()
+    builder.add_int_var('a', 0, 1)
+    builder.add_int_var('b', 0, 1)
+    builder.add_constraint_eqz('a - {0}'.format(t[0]))
+    builder.add_constraint_eqz('b - {0}'.format(t[1]))
+    na = builder.conjoin(['a', 'b'])
+    sol = builder.solve()
+    print('solution...')
+    for s in sol:
+        print('\t', s, '=', sol[s])
+    assert(sol['a'] == t[0])
+    assert(sol['b'] == t[1])
+    assert(sol[na] == t[2])
 
 # builder = ILPBuilder()
 # # Schedule parameters
