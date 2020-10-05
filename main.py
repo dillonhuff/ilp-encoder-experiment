@@ -4,6 +4,10 @@ from sympy import *
 glpk_path = '/usr/local/Cellar/glpk/4.65/bin/glpsol'
 glpk_flags = '--model'
 
+def parens(s):
+    return '(' + s + ')'
+
+
 def sp(c):
     return sympify(c)
 
@@ -19,6 +23,20 @@ def add_int_var(name, model):
 
 def add_constraint(name, cst, model):
     return model + 's.t. {0} : {1};\n'.format(name, cst)
+
+class Monomial:
+
+    def __init__(self, components):
+        self.components = components 
+
+class Polynomial:
+
+    def __init__(self, monomials):
+        self.monomials = monomials
+
+def parse_constraint(cst):
+
+    assert(False)
 
 class ILPBuilder:
 
@@ -40,18 +58,27 @@ class ILPBuilder:
 
     def add_synonym(self, name, expr):
         self.add_int_var(name)
-        self.add_constraint(name + ' = ' + expr)
+        self.add_constraint_eqz(name + ' - ' + parens(expr))
+        # self.add_constraint(name + ' = ' + expr)
         
     def add_int_var(self, name, lower=None, upper=None):
         self.variables.append(name)
         self.variable_bounds[name] = (lower, upper)
         if (upper != None):
-            self.add_constraint(name + ' <= ' + str(upper))
+            self.add_constraint_lez(name + ' - ' + parens(str(upper)))
+            # self.add_constraint(name + ' <= ' + str(upper))
         if (lower != None):
-            self.add_constraint(name + ' >= ' + str(lower))
+            self.add_constraint_gez(name + ' - ' + parens(str(lower)))
+            # self.add_constraint(name + ' >= ' + str(lower))
 
-    def add_constraint(self, cst):
-        self.constraints.append(cst)
+    def add_constraint_eqz(self, cst):
+        self.constraints.append(cst + ' = 0')
+
+    def add_constraint_gez(self, cst):
+        self.constraints.append(cst + ' >= 0')
+
+    def add_constraint_lez(self, cst):
+        self.constraints.append(cst + ' <= 0')
 
     def set_objective(self, obj):
         self.objective = obj
@@ -59,8 +86,11 @@ class ILPBuilder:
     def add_indicator(self, target, ub):
         name = 'I_' + target
         self.add_int_var(name, 0, 1)
-        self.add_constraint('{0} - {1}*{2} <= 0'.format(target, ub, name))
-        self.add_constraint('{0} - {1} >= 0'.format(target, name))
+        self.add_constraint_lez('{0} - {1}*{2}'.format(target, ub, name))
+        # self.add_constraint_gez('{0} - {1}'.format(target, name))
+
+        # self.add_constraint('{0} - {1}*{2} <= 0'.format(target, ub, name))
+        # self.add_constraint('{0} - {1} >= 0'.format(target, name))
 
     def solve(self):
         problem = ''
@@ -110,9 +140,10 @@ builder.add_indicator("neg_c_p_share", -1*lb)
 
 # These indicator variables sum to zero
 # iff p and c are scheduled at the same time
-builder.add_synonym("neg_p_c_time", "ii_c*c + d_c - ii_p*p - d_p")
+# builder.add_synonym("neg_p_c_time", "ii_c*c + d_c - ii_p*p - d_p")
+builder.add_synonym("neg_p_c_time", "ii_c + d_c - ii_p - d_p")
 ub = builder.ub("ii_c")*builder.ub("d_c")
-lb = builder.lb("ii_p")*builder.ub("d_p")
+lb = -1*builder.lb("ii_p")*builder.ub("d_p")
 
 builder.add_indicator("neg_p_c_time", ub)
 
@@ -125,7 +156,7 @@ builder.set_objective('ii_p + ii_c')
 builder.add_outer_forall("p", 1, 10)
 builder.add_outer_forall("c", 1, 10)
 
-# builder.show_constraints()
+builder.add_constraint_gez("I_neg_p_c_share + I_neg_c_p_share + I_neg_p_c_time + I_neg_c_p_time - 1")
 
 builder.solve()
 
