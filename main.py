@@ -329,22 +329,22 @@ def add_farkas_constraints(fs, fc, domain, build):
     build.add_constraint_eqz(cst)
     return constraints
 
-builder = ILPBuilder()
-builder.add_int_var('ii_c', 1, 100)
-builder.add_int_var('d_c', 0, 100)
+# builder = ILPBuilder()
+# builder.add_int_var('ii_c', 1, 100)
+# builder.add_int_var('d_c', 0, 100)
 
-builder.add_constraint(Constraint(parse_poly('1*ii_c*c + 1*d_c + -1*20'), '>='))
+# builder.add_constraint(Constraint(parse_poly('1*ii_c*c + 1*d_c + -1*20'), '>='))
 
-deps = Polyhedron()
-deps.add_constraint({'c' : 1}, 0)
-deps.add_constraint({'c' : -1}, 10)
+# deps = Polyhedron()
+# deps.add_constraint({'c' : 1}, 0)
+# deps.add_constraint({'c' : -1}, 10)
 
-fs = { 'c' : 'ii_c'}
-fc = 'd_c + -20'
+# fs = { 'c' : 'ii_c'}
+# fc = 'd_c + -20'
 
-add_farkas_constraints(fs, fc, deps, builder)
-sol = builder.solve()
-assert(len(sol) > 0)
+# add_farkas_constraints(fs, fc, deps, builder)
+# sol = builder.solve()
+# assert(len(sol) > 0)
 
 # Checking farkas constraints
 builder = ILPBuilder()
@@ -402,3 +402,53 @@ assert(sol['d_c'] == 1)
 assert(sol['ii_p'] == 1)
 assert(sol['d_p'] == 0)
 
+class LinearForm:
+
+    def __init__(self, args):
+        self.coeffs = args
+
+class AffineForm:
+
+    def __init__(self, lexpr, d):
+        self.expr = lexpr
+        self.d = d
+
+class QuadraticForm:
+
+    def __init__(self, args):
+        self.coeffs = args
+
+    def __repr__(self):
+        s = '0'
+        for c in self.coeffs:
+            s += ' + ' + str(self.coeffs[c]) + '*' + c[0] + '*' + c[1]
+        return s
+
+class DConstraint:
+
+    def __init__(self, expr, d, comp):
+        self.expr = expr
+        self.d = d
+        self.comp = comp
+
+class Connective:
+
+    def __init__(self, name, args):
+        self.name = name
+        self.args = args
+
+class ForallInPolyhedron:
+
+    def __init__(self, polyhedron, formula):
+        self.polyhedron = polyhedron
+        self.formula = formula
+
+    def __repr__(self):
+        s = 'forall ' + str(self.polyhedron) + ' . ' + str(self.formula)
+        return s
+
+qf = QuadraticForm({('c', 'ii_c') : 1, ('p', 'ii_p') : -1})
+dc = DConstraint(qf, AffineForm(LinearForm({'d_c' : 1, 'd_p' : -1}), 1), '>=')
+
+df = ForallInPolyhedron(deps, QuadraticForm({('c', 'ii_c') : 1, ('p', 'ii_p') : -1}))
+print(df)
