@@ -271,14 +271,15 @@ class Polyhedron:
 def add_farkas_constraints(fs, fc, domain, build):
     num_multipliers = domain.num_constraints()
     fms = []
+
+    fm0 = build.unique_name('fm_')
+    build.add_int_var(fm0, 0)
+
     for j in range(num_multipliers):
         fms.append(build.unique_name('fm_'))
 
-    fm0 = build.unique_name('fm_')
-
     for v in fms:
-        build.add_int_var(v)
-    build.add_int_var(fm0)
+        build.add_int_var(v, 0)
 
     constraints = []
     for v in fs:
@@ -311,22 +312,17 @@ def add_farkas_constraints(fs, fc, domain, build):
 
 builder = ILPBuilder()
 builder.add_int_var('ii_c', 1, 100)
-builder.add_int_var('ii_p', 1, 100)
-builder.add_int_var('d_p', 0, 100)
 builder.add_int_var('d_c', 0, 100)
 
-fs = { 'c' : 'ii_c', 'p' : '-ii_p'}
-fc = 'd_c - d_p'
+# fs = { 'c' : 'ii_c', 'p' : '-2*ii_p'}
+# fc = 'd_c - d_p + 5'
+
+fs = { 'c' : 'ii_c'}
+fc = 'd_c + -20'
 
 deps = Polyhedron()
 deps.add_constraint({'c' : 1}, 0)
 deps.add_constraint({'c' : -1}, 10)
-
-deps.add_constraint({'p' : 1}, 0)
-deps.add_constraint({'p' : -1}, 10)
-
-deps.add_constraint({'p' : 1, 'c' : -1}, 0)
-deps.add_constraint({'p' : -1, 'c' : 1}, 0)
 
 add_farkas_constraints(fs, fc, deps, builder)
 
