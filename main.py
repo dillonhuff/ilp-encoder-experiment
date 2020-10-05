@@ -268,40 +268,69 @@ class Polyhedron:
         else:
             return 0
 
-def farkas_constraints(fs, fc, domain):
+def add_farkas_constraints(fs, fc, domain, build):
     num_multipliers = domain.num_constraints()
+    fms = []
+    for j in range(num_multipliers):
+        fms.append(build.unique_name('fm_'))
+
+    fm0 = build.unique_name('fm_')
+
+    for v in fms:
+        build.add_int_var(v)
+    build.add_int_var(fm0)
+
     constraints = []
     for v in fs:
         expr = fs[v]
         cexpr = []
         for j in range(num_multipliers):
-            fmj = 'fm_' + str(j + 1)
+            fmj = fms[j]
             Aji = domain.coeff(j, v)
             cexpr.append(str(Aji) + '*' + fmj)
-        constraints.append(expr + ' - ' + parens(' + '.join(cexpr)))
+        # constraints.append(expr + ' - ' + parens(' + '.join(cexpr)))
+        build.add_constraint_eqz(expr + ' - ' + parens(' + '.join(cexpr)))
 
     csts = []
     for j in range(num_multipliers):
-        csts.append('fm_' + str(j + 1) + '*' + str(domain.b[j]))
-    cst = '{0} - {1} - {2}'.format(fc, parens(' + '.join(csts)), 'fm_0')
-    constraints.append(cst)
+        csts.append(fms[j] + '*' + str(domain.b[j]))
+    cst = '{0} - {1} - {2}'.format(fc, parens(' + '.join(csts)), fm0)
+    # constraints.append(cst)
+    build.add_constraint_eqz(cst)
     return constraints
 
-domain = Polyhedron()
-domain.add_constraint({'c' : 1}, 0)
-domain.add_constraint({'c' : -1}, 10)
+# domain = Polyhedron()
+# domain.add_constraint({'c' : 1}, 0)
+# domain.add_constraint({'c' : -1}, 10)
 
-domain.add_constraint({'p' : 1}, 0)
-domain.add_constraint({'p' : -1}, 10)
+# domain.add_constraint({'p' : 1}, 0)
+# domain.add_constraint({'p' : -1}, 10)
 
-print('Loop bounds')
-print(domain)
+# print('Loop bounds')
+# print(domain)
+
+builder = ILPBuilder()
+builder.add_int_var('ii_c', 1, 100)
+builder.add_int_var('ii_p', 1, 100)
+builder.add_int_var('d_p', 0, 100)
+builder.add_int_var('d_c', 0, 100)
 
 fs = { 'c' : 'ii_c', 'p' : '-ii_p'}
 fc = 'd_c - d_p'
-farkas_cs = farkas_constraints(fs, fc, domain)
 
-for c in farkas_cs:
-    print(c)
+deps = Polyhedron()
+deps.add_constraint({'c' : 1}, 0)
+deps.add_constraint({'c' : -1}, 10)
 
+deps.add_constraint({'p' : 1}, 0)
+deps.add_constraint({'p' : -1}, 10)
 
+deps.add_constraint({'p' : 1, 'c' : -1}, 0)
+deps.add_constraint({'p' : -1, 'c' : 1}, 0)
+
+add_farkas_constraints(fs, fc, deps, builder)
+
+sol = builder.solve()
+print('II solution...')
+for s in sol:
+    print('\t', s, '=', sol[s])
