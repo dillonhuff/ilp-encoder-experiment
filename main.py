@@ -22,13 +22,40 @@ def add_constraint(name, cst, model):
 
 class Monomial:
 
-    def __init__(self, components):
+    def __init__(self, coeff, components):
+        self.coeff = coeff
         self.components = components 
+
+    def __repr__(self):
+        css = [str(self.coeff)]
+        for c in self.components:
+            css.append(str(c))
+        return '*'.join(css)
 
 class Polynomial:
 
     def __init__(self, monomials):
         self.monomials = monomials
+
+    def __repr__(self):
+        mss = []
+        for m in self.monomials:
+            mss.append(str(m))
+        return ' + '.join(mss)
+
+def parse_mono(txt):
+    normed = txt.strip().replace(' ', '')
+    terms = normed.split('*')
+    return Monomial(terms[0], terms[1:])
+
+def parse_poly(txt):
+    normed = txt.strip().replace(' ', '')
+    monos = normed.split('+')
+    print('monos:', monos)
+    monomials = []
+    for p in monos:
+        monomials.append(parse_mono(p))
+    return Polynomial(monomials)
 
 class Constraint:
 
@@ -84,13 +111,13 @@ class ILPBuilder:
         self.constraints.append(cst)
 
     def add_constraint_eqz(self, cst):
-        self.constraints.append(Constraint(sympify(cst), '='))
+        self.constraints.append(Constraint((cst), '='))
 
     def add_constraint_gez(self, cst):
-        self.constraints.append(Constraint(sympify(cst), '>='))
+        self.constraints.append(Constraint((cst), '>='))
 
     def add_constraint_lez(self, cst):
-        self.constraints.append(Constraint(sympify(cst), '<='))
+        self.constraints.append(Constraint((cst), '<='))
 
     def set_objective(self, obj):
         self.objective = obj
@@ -261,18 +288,18 @@ class Polyhedron:
             return 0
 
 def add_farkas_constraints(fs, fc, domain, build):
-    for c in build.constraints:
-        print(c)
-        for v in domain.A[0]:
-            if c.expr.find(sympify(v)):
-                print('\tContains variable:', v)
-                s = collect(c.expr, sympify(v))
-                print('\t', srepr(s))
-                for v in s.args:
-                    print('\t\t', v)
-                    print('\t\tdeg:', v.degree(sympify(v)))
+    # for c in build.constraints:
+        # print(c)
+        # for v in domain.A[0]:
+            # if c.expr.find(sympify(v)):
+                # print('\tContains variable:', v)
+                # s = collect(c.expr, sympify(v))
+                # print('\t', srepr(s))
+                # for v in s.args:
+                    # print('\t\t', v)
+                    # print('\t\tdeg:', v.degree(sympify(v)))
 
-    assert(False)
+    # assert(False)
     num_multipliers = domain.num_constraints()
     fms = []
 
@@ -306,7 +333,7 @@ builder = ILPBuilder()
 builder.add_int_var('ii_c', 1, 100)
 builder.add_int_var('d_c', 0, 100)
 
-builder.add_constraint(Constraint(sympify('ii_c*c + d_c - 20'), '>='))
+builder.add_constraint(Constraint(parse_poly('1*ii_c*c + 1*d_c + -1*20'), '>='))
 
 deps = Polyhedron()
 deps.add_constraint({'c' : 1}, 0)
@@ -316,6 +343,8 @@ fs = { 'c' : 'ii_c'}
 fc = 'd_c + -20'
 
 add_farkas_constraints(fs, fc, deps, builder)
+sol = builder.solve()
+assert(len(sol) > 0)
 
 # Checking farkas constraints
 builder = ILPBuilder()
