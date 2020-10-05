@@ -34,6 +34,15 @@ class Polynomial:
     def __init__(self, monomials):
         self.monomials = monomials
 
+class Constraint:
+
+    def __init__(self, expr, cmp):
+        self.expr = expr
+        self.cmp = cmp
+
+    def __repr__(self):
+        return self.expr + ' ' + self.cmp + ' 0'
+
 def parse_constraint(cst):
 
     assert(False)
@@ -72,13 +81,15 @@ class ILPBuilder:
             # self.add_constraint(name + ' >= ' + str(lower))
 
     def add_constraint_eqz(self, cst):
-        self.constraints.append(cst + ' = 0')
+        self.constraints.append(Constraint(cst, '='))
 
     def add_constraint_gez(self, cst):
-        self.constraints.append(cst + ' >= 0')
+        self.constraints.append(Constraint(cst, '>='))
+        # self.constraints.append(cst + ' >= 0')
 
     def add_constraint_lez(self, cst):
-        self.constraints.append(cst + ' <= 0')
+        self.constraints.append(Constraint(cst, '<='))
+        # self.constraints.append(cst + ' <= 0')
 
     def set_objective(self, obj):
         self.objective = obj
@@ -88,9 +99,6 @@ class ILPBuilder:
         self.add_int_var(name, 0, 1)
         self.add_constraint_lez('{0} - {1}*{2}'.format(target, ub, name))
         # self.add_constraint_gez('{0} - {1}'.format(target, name))
-
-        # self.add_constraint('{0} - {1}*{2} <= 0'.format(target, ub, name))
-        # self.add_constraint('{0} - {1} >= 0'.format(target, name))
 
     def solve(self):
         problem = ''
@@ -102,7 +110,7 @@ class ILPBuilder:
 
         i = 0
         for c in self.constraints:
-            problem = add_constraint('c{0}'.format(i), c, problem)
+            problem = add_constraint('c{0}'.format(i), str(c), problem)
             i += 1
 
         problem += 'minimize obj : {0};\n'.format(self.objective)
