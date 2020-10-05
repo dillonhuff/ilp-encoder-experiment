@@ -72,6 +72,9 @@ class ILPBuilder:
     def ub(self, name):
         return self.variable_bounds[name][1]
 
+    def abs_max(self, name):
+        return max(abs(self.ub(name)), abs(self.lb(name)))
+
     def add_synonym(self, name, expr):
         self.add_int_var(name)
         self.add_constraint_eqz(name + ' - ' + parens(expr))
@@ -106,6 +109,14 @@ class ILPBuilder:
     def fresh_zero_one_var(self, prefix='zo_'):
         name = self.unique_name('zo_')
         self.add_int_var(name, 0, 1)
+        return name
+
+    def gt_var(self, a, b):
+        k = max(self.abs_max(a), self.abs_max(b))
+        K = 2*k + 1
+        name = self.fresh_zero_one_var('gt_')
+        self.add_constraint_gez('{0} - {1} + {2}*{3}'.format(b, a, K, name))
+        self.add_constraint_lez('{0} - {1} + {2}*{3} - {2} + 1'.format(b, a, K, name))
         return name
 
     def conjoin(self, vars):
@@ -200,6 +211,24 @@ for t in and_tests:
     assert(sol['b'] == t[1])
     assert(sol[na] == t[2])
 
+gt_tests = [[0, 0, 0], [0, 1, 0], [9, 7, 1], [1, -3, 1], [-3, -5, 1]]
+for t in gt_tests:
+    builder = ILPBuilder()
+    builder.add_int_var('a', -1000, 1000)
+    builder.add_int_var('b', -500, 250)
+    builder.add_constraint_eqz('a - {0}'.format(t[0]))
+    builder.add_constraint_eqz('b - {0}'.format(t[1]))
+    na = builder.gt_var('a', 'b')
+    sol = builder.solve()
+    print('expected...')
+    for s in range(3):
+        print('\t', s, '=', t[s])
+    print('solution...')
+    for s in sol:
+        print('\t', s, '=', sol[s])
+    assert(sol['a'] == t[0])
+    assert(sol['b'] == t[1])
+    assert(sol[na] == t[2])
 # builder = ILPBuilder()
 # # Schedule parameters
 # builder.add_int_var("ii_p", 1, 100000)
