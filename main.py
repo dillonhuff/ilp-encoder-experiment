@@ -7,10 +7,6 @@ glpk_flags = '--model'
 def parens(s):
     return '(' + s + ')'
 
-
-def sp(c):
-    return sympify(c)
-
 def run_cmd(cmd):
     res = os.system(cmd)
     return res
@@ -42,10 +38,6 @@ class Constraint:
 
     def __repr__(self):
         return str(self.expr) + ' ' + self.cmp + ' 0'
-
-def parse_constraint(cst):
-
-    assert(False)
 
 class ILPBuilder:
 
@@ -87,6 +79,9 @@ class ILPBuilder:
             self.add_constraint_lez(name + ' - ' + parens(str(upper)))
         if (lower != None):
             self.add_constraint_gez(name + ' - ' + parens(str(lower)))
+
+    def add_constraint(self, cst):
+        self.constraints.append(cst)
 
     def add_constraint_eqz(self, cst):
         self.constraints.append(Constraint(sympify(cst), '='))
@@ -266,6 +261,12 @@ class Polyhedron:
             return 0
 
 def add_farkas_constraints(fs, fc, domain, build):
+    for c in build.constraints:
+        print(c)
+        for v in domain.A[0]:
+            if c.expr.find(sympify(v)):
+                print('\tContains variable:', v)
+    assert(False)
     num_multipliers = domain.num_constraints()
     fms = []
 
@@ -295,6 +296,22 @@ def add_farkas_constraints(fs, fc, domain, build):
     build.add_constraint_eqz(cst)
     return constraints
 
+builder = ILPBuilder()
+builder.add_int_var('ii_c', 1, 100)
+builder.add_int_var('d_c', 0, 100)
+
+builder.add_constraint(Constraint(sympify('ii_c*c + d_c - 20'), '>='))
+
+deps = Polyhedron()
+deps.add_constraint({'c' : 1}, 0)
+deps.add_constraint({'c' : -1}, 10)
+
+fs = { 'c' : 'ii_c'}
+fc = 'd_c + -20'
+
+add_farkas_constraints(fs, fc, deps, builder)
+
+# Checking farkas constraints
 builder = ILPBuilder()
 builder.add_int_var('ii_c', 1, 100)
 builder.add_int_var('d_c', 0, 100)
