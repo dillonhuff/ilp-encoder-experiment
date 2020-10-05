@@ -314,6 +314,8 @@ builder = ILPBuilder()
 builder.add_int_var('ii_c', 1, 100)
 builder.add_int_var('d_c', 0, 100)
 
+builder.objective = 'ii_c + d_c'
+
 # fs = { 'c' : 'ii_c', 'p' : '-2*ii_p'}
 # fc = 'd_c - d_p + 5'
 
@@ -330,3 +332,5 @@ sol = builder.solve()
 print('II solution...')
 for s in sol:
     print('\t', s, '=', sol[s])
+assert(sol['ii_c'] == 1)
+assert(sol['d_c'] == 20)
