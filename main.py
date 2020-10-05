@@ -108,6 +108,20 @@ class ILPBuilder:
         self.add_int_var(name, 0, 1)
         return name
 
+    def conjoin(self, vars):
+        assert(len(vars) > 0)
+
+        for v in vars:
+            print('v =', v)
+            assert(self.is_zero_one_var(v))
+        conj = self.fresh_zero_one_var('neg_')
+        n = len(vars)
+        sum_str = ' + '.join(vars)
+        top = '(-2*{0})'.format(conj)
+        self.add_constraint_gez('{0} + {1}'.format(sum_str, top))
+        self.add_constraint_lez('{0} + {1} - 1'.format(sum_str, top))
+        return conj
+
     def negate(self, var):
         assert(self.is_zero_one_var(var))
         neg = self.fresh_zero_one_var('neg_')
@@ -160,7 +174,6 @@ for s in sol:
 assert(sol['a'] == 1)
 assert(sol[na] == 0)
 
-
 builder = ILPBuilder()
 builder.add_int_var('a', 0, 1)
 builder.add_constraint_eqz('a')
@@ -170,6 +183,19 @@ for s in sol:
     print('\t', s, '=', sol[s])
 assert(sol['a'] == 0)
 assert(sol[na] == 1)
+
+builder = ILPBuilder()
+builder.add_int_var('a', 0, 1)
+builder.add_int_var('b', 0, 1)
+builder.add_constraint_eqz('a')
+builder.add_constraint_eqz('b')
+na = builder.conjoin(['a', 'b'])
+sol = builder.solve()
+for s in sol:
+    print('\t', s, '=', sol[s])
+assert(sol['a'] == 0)
+assert(sol['b'] == 0)
+assert(sol[na] == 0)
 
 # builder = ILPBuilder()
 # # Schedule parameters
