@@ -111,6 +111,12 @@ class ILPBuilder:
         self.add_int_var(name, 0, 1)
         return name
 
+    def lte_var(self, a, b):
+        return negate(gt_var(a, b))
+
+    def eq_var(self, a, b):
+        return conjoin([lte_var(a, b), lte_var(b, a)])
+    
     def gt_var(self, a, b):
         k = max(self.abs_max(a), self.abs_max(b))
         K = 2*k + 1
@@ -229,49 +235,5 @@ for t in gt_tests:
     assert(sol['a'] == t[0])
     assert(sol['b'] == t[1])
     assert(sol[na] == t[2])
-# builder = ILPBuilder()
-# # Schedule parameters
-# builder.add_int_var("ii_p", 1, 100000)
-# builder.add_int_var("ii_c", 1, 100000)
 
-# builder.add_int_var("d_p", 0, 100000)
-# builder.add_int_var("d_c", 0, 100000)
-
-# # Resource assignment constraints
-# builder.add_int_var("unit_p", 0, 1)
-# builder.add_int_var("unit_c", 0, 1)
-
-# # These indicator variables sum to zero iff
-# # p and c are using the same functional unit
-# builder.add_synonym("neg_p_c_share", "unit_p - unit_c")
-# ub = 1
-# lb = -1
-# builder.add_indicator("neg_p_c_share", ub)
-
-# builder.add_synonym("neg_c_p_share", "-1*neg_p_c_share")
-# builder.add_indicator("neg_c_p_share", -1*lb)
-
-# # These indicator variables sum to zero
-# # iff p and c are scheduled at the same time
-# # builder.add_synonym("neg_p_c_time", "ii_c*c + d_c - ii_p*p - d_p")
-# builder.add_synonym("neg_p_c_time", "ii_c + d_c - ii_p - d_p")
-# ub = builder.ub("ii_c")*builder.ub("d_c")
-# lb = -1*builder.lb("ii_p")*builder.ub("d_p")
-
-# builder.add_indicator("neg_p_c_time", ub)
-
-# builder.add_synonym("neg_c_p_time", "-1*neg_p_c_time")
-# builder.add_indicator("neg_c_p_time", -1*lb)
-
-# builder.set_objective('ii_p + ii_c')
-
-# # Iteration domains
-# builder.add_outer_forall("p", 1, 10)
-# builder.add_outer_forall("c", 1, 10)
-
-# builder.add_constraint_gez("I_neg_p_c_share + I_neg_c_p_share + I_neg_p_c_time + I_neg_c_p_time - 1")
-
-# sol = builder.solve()
-# for s in sol:
-    # print('\t', s, '=', sol[s])
 
