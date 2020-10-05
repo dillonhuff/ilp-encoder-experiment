@@ -266,6 +266,12 @@ def add_farkas_constraints(fs, fc, domain, build):
         for v in domain.A[0]:
             if c.expr.find(sympify(v)):
                 print('\tContains variable:', v)
+                s = collect(c.expr, sympify(v))
+                print('\t', srepr(s))
+                for v in s.args:
+                    print('\t\t', v)
+                    print('\t\tdeg:', v.degree(sympify(v)))
+
     assert(False)
     num_multipliers = domain.num_constraints()
     fms = []
