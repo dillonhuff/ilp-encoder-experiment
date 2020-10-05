@@ -23,10 +23,14 @@ def add_constraint(name, cst, model):
 class ILPBuilder:
 
     def __init__(self):
+        self.outer_foralls = []
         self.constraints = []
         self.variables = []
         self.variable_bounds = {}
         self.objective = None
+
+    def add_outer_forall(self, var, lb, ub):
+        self.variable_bounds[var] = (lb, ub)
 
     def lb(self, name):
         return self.variable_bounds[name][0]
@@ -60,7 +64,7 @@ class ILPBuilder:
 
     def solve(self):
         problem = ''
-        
+
         i = 0
         for v in self.variables:
             problem = add_int_var(v, problem)
@@ -82,10 +86,6 @@ class ILPBuilder:
         run_cmd('{0} {1} {2}'.format(glpk_path, glpk_flags, 'prob.mod'))
 
 builder = ILPBuilder()
-
-# Iteration domains
-builder.add_int_var("p", 1, 10)
-builder.add_int_var("c", 1, 10)
 
 # Schedule parameters
 builder.add_int_var("ii_p", 1, 100000)
@@ -119,9 +119,13 @@ builder.add_indicator("neg_p_c_time", ub)
 builder.add_synonym("neg_c_p_time", "-1*neg_p_c_time")
 builder.add_indicator("neg_c_p_time", -1*lb)
 
-h = sympify("3*ii_p + ii_c - 12 - 1 >= 0")
-
 builder.set_objective('ii_p + ii_c')
+
+# Iteration domains
+builder.add_outer_forall("p", 1, 10)
+builder.add_outer_forall("c", 1, 10)
+
+# builder.show_constraints()
 
 builder.solve()
 
