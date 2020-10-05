@@ -236,4 +236,34 @@ for t in gt_tests:
     assert(sol['b'] == t[1])
     assert(sol[na] == t[2])
 
+class Polyhedron:
 
+    def __init__(self):
+        self.A = []
+        self.b = []
+
+    def add_constraint(self, a, b):
+        self.A.append(a);
+        self.b.append(b)
+
+    def __repr__(self):
+        s = ''
+        for i in range(len(self.A)):
+            a = self.A[i]
+            cs = []
+            for v in a:
+                cs.append(str(a[v]) + '*' + v)
+            s += ' + '.join(cs)
+            s += ' + ' + str(self.b[i]) + ' >= 0'
+            s += '\n'
+        return s
+
+domain = Polyhedron()
+domain.add_constraint({'c' : 1}, 0)
+domain.add_constraint({'c' : -1}, 10)
+
+domain.add_constraint({'p' : 1}, 0)
+domain.add_constraint({'p' : -1}, 10)
+
+print('Loop bounds')
+print(domain)
