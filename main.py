@@ -16,7 +16,7 @@ def run_cmd(cmd):
     return res
 
 def print_var(name):
-    return 'printf "{0}: %d\\n", {0};\n'.format(name)
+    return 'printf "<SOL>,{0},%d\\n", {0};\n'.format(name)
 
 def add_int_var(name, model):
     return model + 'var {0}, integer;\n'.format(name)
@@ -50,11 +50,17 @@ def parse_constraint(cst):
 class ILPBuilder:
 
     def __init__(self):
+        self.unique_num = 0
         self.outer_foralls = []
         self.constraints = []
         self.variables = []
         self.variable_bounds = {}
         self.objective = None
+
+    def unique_id(self, prefix='U_'):
+        un = self.unique_num
+        self.unique_num += 1
+        return prefix + str(un);
 
     def add_outer_forall(self, var, lb, ub):
         self.variable_bounds[var] = (lb, ub)
@@ -94,11 +100,24 @@ class ILPBuilder:
     def set_objective(self, obj):
         self.objective = obj
 
+    def is_zero_one_var(self, name):
+        return self.variable_bounds[name][0] == 0 and self.variable_bounds[name][1] == 1
+
+    def fresh_zero_one_var(self):
+        name = self.unique_name('zo_')
+        self.add_int_var(name, 0, 1)
+        return name
+
+    def negate(self, var):
+        assert(self.is_zero_one_var(var))
+        neg = self.fresh_zero_one_var(self)
+        self.synonym(neg, '1 - {0}'.format(var))
+        return neg
+
     def add_indicator(self, target, ub):
         name = 'I_' + target
         self.add_int_var(name, 0, 1)
         self.add_constraint_lez('{0} - {1}*{2}'.format(target, ub, name))
-        # self.add_constraint_gez('{0} - {1}'.format(target, name))
 
     def solve(self):
         problem = ''
@@ -121,7 +140,14 @@ class ILPBuilder:
             problem += print_var(v)
             i += 1
         problem_file = open('prob.mod', 'w').write(problem)
-        run_cmd('{0} {1} {2}'.format(glpk_path, glpk_flags, 'prob.mod'))
+        run_cmd('{0} {1} {2} >& sol.txt'.format(glpk_path, glpk_flags, 'prob.mod'))
+        sol_lines = open('sol.txt', 'r').readlines()
+        val_map = {}
+        for l in sol_lines:
+            fields = l.split(',')
+            if (len(fields) == 3 and fields[0] == '<SOL>'):
+                val_map[fields[1]] = int(fields[2])
+        return val_map
 
 builder = ILPBuilder()
 
@@ -166,5 +192,7 @@ builder.add_outer_forall("c", 1, 10)
 
 builder.add_constraint_gez("I_neg_p_c_share + I_neg_c_p_share + I_neg_p_c_time + I_neg_c_p_time - 1")
 
-builder.solve()
+sol = builder.solve()
+for s in sol:
+    print('\t', s, '=', sol[s])
 
