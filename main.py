@@ -258,6 +258,9 @@ class Polyhedron:
             s += '\n'
         return s
 
+def farkas_constraints(fs, fc, domain):
+    assert(False)
+
 domain = Polyhedron()
 domain.add_constraint({'c' : 1}, 0)
 domain.add_constraint({'c' : -1}, 10)
@@ -267,3 +270,7 @@ domain.add_constraint({'p' : -1}, 10)
 
 print('Loop bounds')
 print(domain)
+
+fs = { 'c' : 'ii_c', 'p' : '-ii_p'}
+fc = 'd_c - d_p'
+farkas_constraints(fs, fc, domain)
