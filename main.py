@@ -258,8 +258,34 @@ class Polyhedron:
             s += '\n'
         return s
 
+    def num_constraints(self):
+        return len(self.A)
+
+    def coeff(self, row, colname):
+        r = self.A[row]
+        if colname in r:
+            return self.A[row][colname]
+        else:
+            return 0
+
 def farkas_constraints(fs, fc, domain):
-    assert(False)
+    num_multipliers = domain.num_constraints()
+    constraints = []
+    for v in fs:
+        expr = fs[v]
+        cexpr = []
+        for j in range(num_multipliers):
+            fmj = 'fm_' + str(j + 1)
+            Aji = domain.coeff(j, v)
+            cexpr.append(str(Aji) + '*' + fmj)
+        constraints.append(expr + ' - ' + parens(' + '.join(cexpr)))
+
+    csts = []
+    for j in range(num_multipliers):
+        csts.append('fm_' + str(j + 1) + '*' + str(domain.b[j]))
+    cst = '{0} - {1} - {2}'.format(fc, parens(' + '.join(csts)), 'fm_0')
+    constraints.append(cst)
+    return constraints
 
 domain = Polyhedron()
 domain.add_constraint({'c' : 1}, 0)
@@ -273,4 +299,9 @@ print(domain)
 
 fs = { 'c' : 'ii_c', 'p' : '-ii_p'}
 fc = 'd_c - d_p'
-farkas_constraints(fs, fc, domain)
+farkas_cs = farkas_constraints(fs, fc, domain)
+
+for c in farkas_cs:
+    print(c)
+
+
