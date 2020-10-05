@@ -41,7 +41,7 @@ class Constraint:
         self.cmp = cmp
 
     def __repr__(self):
-        return self.expr + ' ' + self.cmp + ' 0'
+        return str(self.expr) + ' ' + self.cmp + ' 0'
 
 def parse_constraint(cst):
 
@@ -78,7 +78,6 @@ class ILPBuilder:
     def add_synonym(self, name, expr):
         self.add_int_var(name)
         self.add_constraint_eqz(name + ' - ' + parens(expr))
-        # self.add_constraint(name + ' = ' + expr)
         
     def add_int_var(self, name, lower=None, upper=None):
         assert(not name in self.variables)
@@ -86,19 +85,17 @@ class ILPBuilder:
         self.variable_bounds[name] = (lower, upper)
         if (upper != None):
             self.add_constraint_lez(name + ' - ' + parens(str(upper)))
-            # self.add_constraint(name + ' <= ' + str(upper))
         if (lower != None):
             self.add_constraint_gez(name + ' - ' + parens(str(lower)))
-            # self.add_constraint(name + ' >= ' + str(lower))
 
     def add_constraint_eqz(self, cst):
-        self.constraints.append(Constraint(cst, '='))
+        self.constraints.append(Constraint(sympify(cst), '='))
 
     def add_constraint_gez(self, cst):
-        self.constraints.append(Constraint(cst, '>='))
+        self.constraints.append(Constraint(sympify(cst), '>='))
 
     def add_constraint_lez(self, cst):
-        self.constraints.append(Constraint(cst, '<='))
+        self.constraints.append(Constraint(sympify(cst), '<='))
 
     def set_objective(self, obj):
         self.objective = obj
@@ -289,7 +286,6 @@ def add_farkas_constraints(fs, fc, domain, build):
             fmj = fms[j]
             Aji = domain.coeff(j, v)
             cexpr.append(str(Aji) + '*' + fmj)
-        # constraints.append(expr + ' - ' + parens(' + '.join(cexpr)))
         build.add_constraint_eqz(expr + ' - ' + parens(' + '.join(cexpr)))
 
     csts = []
@@ -352,6 +348,9 @@ for s in sol:
 
 assert(sol['ii_c'] == 1)
 assert(sol['d_c'] == 1)
-
 assert(sol['ii_p'] == 1)
 assert(sol['d_p'] == 0)
+
+
+
+
