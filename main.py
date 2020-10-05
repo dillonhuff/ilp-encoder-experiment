@@ -161,6 +161,16 @@ assert(sol['a'] == 1)
 assert(sol[na] == 0)
 
 
+builder = ILPBuilder()
+builder.add_int_var('a', 0, 1)
+builder.add_constraint_eqz('a')
+na = builder.negate('a')
+sol = builder.solve()
+for s in sol:
+    print('\t', s, '=', sol[s])
+assert(sol['a'] == 0)
+assert(sol[na] == 1)
+
 # builder = ILPBuilder()
 # # Schedule parameters
 # builder.add_int_var("ii_p", 1, 100000)
