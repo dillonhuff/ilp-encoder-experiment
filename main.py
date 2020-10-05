@@ -292,7 +292,6 @@ def add_farkas_constraints(fs, fc, domain, build):
     for j in range(num_multipliers):
         csts.append(fms[j] + '*' + str(domain.b[j]))
     cst = '{0} - {1} - {2}'.format(fc, parens(' + '.join(csts)), fm0)
-    # constraints.append(cst)
     build.add_constraint_eqz(cst)
     return constraints
 
@@ -350,7 +349,4 @@ assert(sol['ii_c'] == 1)
 assert(sol['d_c'] == 1)
 assert(sol['ii_p'] == 1)
 assert(sol['d_p'] == 0)
-
-
-
 
