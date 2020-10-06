@@ -532,14 +532,18 @@ def build_equivalent_ilp(formula):
         for subf in formula.args:
             build_equivalent_ilp(subf)
 
-        print(formula.name)
+        fm_vars[uvar()] = formula
     else:
         assert(isinstance(formula, DConstraint))
         expr_vars[uvar()] = formula.lhs
+        fm_vars[uvar()] = formula
 
 build_equivalent_ilp(df.formula)
 print('evars')
 for e in expr_vars:
     print('\t', e, '->', expr_vars[e])
-
+print('')
+print('fvars')
+for e in fm_vars:
+    print('\t', e, '->', fm_vars[e])
 
