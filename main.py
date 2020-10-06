@@ -500,8 +500,16 @@ print('Resource constraints...')
 print(df)
 
 unum = 0
+expr_vars = {}
+fm_vars = {}
 def build_equivalent_ilp(formula):
     print('\t', formula)
-    assert(False)
+    if isinstance(formula, Connective):
+        for subf in formula.args:
+            build_equivalent_ilp(subf)
+
+        print(formula.name)
+    else:
+        assert(isinstance(formula, DConstraint))
 
 build_equivalent_ilp(df.formula)
