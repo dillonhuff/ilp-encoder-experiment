@@ -725,6 +725,8 @@ for e in fm_vars:
     print('\t', e, '->', fm_vars[e])
 
 build_boolean_constraints(df.formula)
+for e in expr_vars:
+    ilp_constraints.append(eqc(e - lin_lhs(expr_vars[e])))
 
 builder = ILPBuilder()
 print('ILP constraints..')
@@ -743,4 +745,4 @@ print('II solution...')
 for s in sol:
     print('\t', s, '=', sol[s])
 
-assert(sol['a'] == 1)
+assert(sol['a'] >= 1)
