@@ -1,5 +1,6 @@
 import os
 from sympy import *
+import copy
 
 glpk_path = '/usr/local/Cellar/glpk/4.65/bin/glpsol'
 glpk_flags = '--model'
@@ -407,6 +408,22 @@ class LinearForm:
     def __init__(self, args):
         self.coeffs = args
 
+    def __add__(self, other):
+        cfs = copy.deepcopy(self.coeffs)
+        for c in copy.deepcopy(other.coeffs):
+            if c in cfs:
+                cfs[c] = cfs[c] + other.coeffs[c]
+            else:
+                cfs[c] = other.coeffs[c]
+        return LinearForm(cfs)
+
+    def smul(self, k):
+        cfs = {}
+        for c in copy.deepcopy(self.coeffs):
+            print(c)
+            cfs[c] = k*self.coeffs[c]
+        return LinearForm(cfs)
+
     def __repr__(self):
         mms = []
         for c in self.coeffs:
@@ -427,11 +444,35 @@ class QuadraticForm:
     def __init__(self, args):
         self.coeffs = args
 
+    def smul(self, k):
+        cfs = {}
+        for c in copy.deepcopy(self.coeffs):
+            print(c)
+            cfs[c] = k*self.coeffs[c]
+        return QuadraticForm(cfs)
+
+    def __add__(self, other):
+        cfs = copy.deepcopy(self.coeffs)
+        for c in copy.deepcopy(other.coeffs):
+            if c in cfs:
+                cfs[c] = cfs[c] + other.coeffs[c]
+            else:
+                cfs[c] = other.coeffs[c]
+        return QuadraticForm(cfs)
+
     def __repr__(self):
         mms = []
         for c in self.coeffs:
             mms.append(str(self.coeffs[c]) + '*' + c[0] + '*' + c[1])
+        if len(mms) == 0:
+            return '0'
         return ' + '.join(mms)
+
+def zero_qf():
+    return QuadraticForm({})
+
+def zero_lf():
+    return LinearForm({})
 
 class DLHS:
 
@@ -439,6 +480,13 @@ class DLHS:
         self.qf = qf
         self.lf = lf
         self.d = d
+
+    def __add__(self, other):
+        print(type(self.lf))
+        print(type(other.lf))
+        print(type(self.d))
+        print(type(other.d))
+        return DLHS(self.qf + other.qf, self.lf + other.lf, self.d + other.d)
 
     def __repr__(self):
         ss = []
@@ -488,7 +536,6 @@ class ForallInPolyhedron:
         return s
 
 qf = QuadraticForm({('c', 'ii_c') : 1, ('p', 'ii_p') : -1})
-# dc = DConstraint(qf, AffineForm(LinearForm({'d_c' : 1, 'd_p' : -1}), 1), '>=')
 dc = DConstraint(DLHS(qf, LinearForm({'d_c' : 1, 'd_p' : -1}), 1), '>=')
 df = ForallInPolyhedron(deps, dc)
 
@@ -505,7 +552,7 @@ deps.add_constraint({'p' : -1}, 10)
 qf = QuadraticForm({('c', 'ii_c') : 1, ('p', 'ii_p') : -1})
 dc = DConstraint(DLHS(qf, LinearForm({'d_c' : 1, 'd_p' : -1}), 0), '!=')
 
-rc_ne = DConstraint(DLHS(None, LinearForm({'r_c' : 1, 'r_p' : -1}), 0), '=')
+rc_ne = DConstraint(DLHS(zero_qf(), LinearForm({'r_c' : 1, 'r_p' : -1}), 0), '=')
 
 dc = implies_constraint(rc_ne, dc)
 df = ForallInPolyhedron(deps, dc)
@@ -526,17 +573,64 @@ ilp_constraints = []
 expr_vars = {}
 fm_vars = {}
 
+def eqc(expr):
+    return DConstraint(expr, '=')
+
+def lte(expr):
+    return DConstraint(expr, '<=')
+
+def gte(expr):
+    return DConstraint(expr, '>=')
+
+def lin_lhs(v):
+    return DLHS(zero_qf(), LinearForm({ v : 1}), 0)
+
+def const_lhs(v):
+    return DLHS(zero_qf(), zero_lf(), v)
+
+def add_not(to_neg):
+    vname = uvar()
+    v = lin_lhs(vname)
+    cs = eqc(v + lin_lhs(to_neg))
+    ilp_constraints.append(cs)
+    return vname
+
+def dsmul(k, ss):
+    return DLHS(ss.qf.smul(k), ss.lf.smul(k), ss.d*k)
+
+def add_or(av, bv):
+    ae = lin_lhs(av)
+    be = lin_lhs(bv)
+    two = const_lhs(2)
+    one = const_lhs(1)
+
+    varname = uvar()
+    v = lin_lhs(varname)
+
+    ilp_constraints.append(gte(ae + be + dsmul(-2, v) + one))
+    ilp_constraints.append(lte(ae + be + dsmul(-2, v)))
+    return varname
+
 def build_equivalent_ilp(formula):
     print('\t', formula)
     if isinstance(formula, Connective):
         for subf in formula.args:
             build_equivalent_ilp(subf)
 
-        fm_vars[uvar()] = formula
+        fm_vars[formula] = uvar()
     else:
         assert(isinstance(formula, DConstraint))
-        expr_vars[uvar()] = formula.lhs
-        fm_vars[uvar()] = formula
+        expr_vars[formula.lhs] = uvar()
+        fm_vars[formula] = uvar()
+
+def build_boolean_constraints(formula):
+    print('\t', formula)
+    if isinstance(formula, Connective):
+        for subf in formula.args:
+            build_boolean_constraints(subf)
+        if formula.name == '->':
+            assert(len(formula.args) == 2)
+            add_or(add_not(fm_vars[formula.args[0]]), fm_vars[formula.args[1]])
 
 build_equivalent_ilp(df.formula)
 print('evars')
@@ -547,3 +641,8 @@ print('fvars')
 for e in fm_vars:
     print('\t', e, '->', fm_vars[e])
 
+build_boolean_constraints(df.formula)
+
+print('ILP constraints..')
+for c in ilp_constraints:
+    print(c)
