@@ -406,6 +406,8 @@ assert(sol['d_p'] == 0)
 class LinearForm:
 
     def __init__(self, args):
+        for c in args:
+            assert(isinstance(c, str))
         self.coeffs = args
 
     def __add__(self, other):
@@ -420,7 +422,7 @@ class LinearForm:
     def smul(self, k):
         cfs = {}
         for c in copy.deepcopy(self.coeffs):
-            print(c)
+            print('coeff:', c)
             cfs[c] = k*self.coeffs[c]
         return LinearForm(cfs)
 
@@ -482,7 +484,7 @@ class DLHS:
         self.d = d
 
     def __sub__(self, other):
-        return self - dsmul(-1, other)
+        return self + dsmul(-1, other)
 
     def __add__(self, other):
         return DLHS(self.qf + other.qf, self.lf + other.lf, self.d + other.d)
@@ -590,8 +592,16 @@ def const_lhs(v):
 def dsmul(k, ss):
     return DLHS(ss.qf.smul(k), ss.lf.smul(k), ss.d*k)
 
+def add_gte(a, b):
+    ilp_constraints.append(gte((a) + dsmul(-1, (b))))
+
+def add_lte(a, b):
+    ilp_constraints.append(lte((a) + dsmul(-1, (b))))
+
 def add_eqc(a, b):
-    ilp_constraints.append(eqc(lin_lhs(a) + dsmul(-1, lin_lhs(b))))
+    assert(isinstance(a, DLHS))
+    assert(isinstance(b, DLHS))
+    ilp_constraints.append(eqc((a) + dsmul(-1, (b))))
 
 def add_not(to_neg):
     vname = uvar()
@@ -627,16 +637,32 @@ def add_or(av, bv):
     ilp_constraints.append(lte(ae + be + dsmul(-2, v)))
     return varname
 
+UPPER_BOUND = 99999
+
 def add_cmp_var(var, comparator):
     if comparator == '=':
         vare = lin_lhs(var)
         resname = uvar()
         res = add_and(add_cmp_var(var, '>='), add_cmp_var(var, '<='))
         return res
+    elif comparator == '!=':
+        return add_not(add_cmp_var(var, '='))
     elif comparator == '>=':
         return add_not(add_cmp_var(var, '<'))
+    elif comparator == '<=':
+        return add_not(add_cmp_var(var, '>'))
+    elif comparator == '>':
+        resname = uvar()
+        be = const_lhs(0)
+        ae = lin_lhs(var)
+        add_gte(const_lhs(0), be - ae + dsmul(UPPER_BOUND, lin_lhs(resname)))
+        add_lte(be - ae + dsmul(UPPER_BOUND, lin_lhs(resname)), const_lhs(UPPER_BOUND - 1))
+        return resname
     elif comparator == '<':
-        assert(False)
+        fresh_var = uvar()
+        # v = lin_lhs(fresh_var)
+        add_eqc(lin_lhs(var), lin_lhs(fresh_var))
+        return add_cmp_var(fresh_var, '>')
     else:
         print('Error: Unsupported comparator', comparator)
         assert(False)
@@ -661,7 +687,7 @@ def build_boolean_constraints(formula):
         if formula.name == '->':
             assert(len(formula.args) == 2)
             res = add_or(add_not(fm_vars[formula.args[0]]), fm_vars[formula.args[1]])
-            add_eqc(res, fm_vars[formula])
+            add_eqc(lin_lhs(res), lin_lhs(fm_vars[formula]))
         else:
             print('Error: Unrecognized connective in:', formula)
             assert(False)
@@ -669,7 +695,7 @@ def build_boolean_constraints(formula):
         assert(isinstance(formula, DConstraint))
         fv = fm_vars[formula]
         atom_true = add_cmp_var(expr_vars[formula.lhs], formula.comp)
-        add_eqc(fv, atom_true)
+        add_eqc(lin_lhs(fv), lin_lhs(atom_true))
 
 build_equivalent_ilp(df.formula)
 print('evars')
@@ -685,3 +711,6 @@ build_boolean_constraints(df.formula)
 print('ILP constraints..')
 for c in ilp_constraints:
     print(c)
+
+
+
