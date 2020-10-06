@@ -583,6 +583,12 @@ def lte(expr):
 def gte(expr):
     return DConstraint(expr, '>=')
 
+def indicator_uvar():
+    v = uvar()
+    ilp_constraints.append(lte(lin_lhs(v) - const_lhs(1)))
+    ilp_constraints.append(gte(lin_lhs(v)))
+    return v
+
 def lin_lhs(v):
     return DLHS(zero_qf(), LinearForm({ v : 1}), 0)
 
@@ -604,12 +610,11 @@ def add_eqc(a, b):
     ilp_constraints.append(eqc((a) + dsmul(-1, (b))))
 
 def add_not(to_neg):
-    vname = uvar()
+    vname = indicator_uvar()
     v = lin_lhs(vname)
     cs = eqc(v + lin_lhs(to_neg))
     ilp_constraints.append(cs)
     return vname
-
 
 def add_and(av, bv):
     ae = lin_lhs(av)
@@ -617,7 +622,7 @@ def add_and(av, bv):
     two = const_lhs(2)
     one = const_lhs(1)
 
-    varname = uvar()
+    varname = indicator_uvar()
     v = lin_lhs(varname)
 
     ilp_constraints.append(lte(ae + be + dsmul(-2, v) - one))
@@ -630,7 +635,7 @@ def add_or(av, bv):
     two = const_lhs(2)
     one = const_lhs(1)
 
-    varname = uvar()
+    varname = indicator_uvar()
     v = lin_lhs(varname)
 
     ilp_constraints.append(gte(ae + be + dsmul(-2, v) + one))
@@ -642,7 +647,6 @@ UPPER_BOUND = 99999
 def add_cmp_var(var, comparator):
     if comparator == '=':
         vare = lin_lhs(var)
-        resname = uvar()
         res = add_and(add_cmp_var(var, '>='), add_cmp_var(var, '<='))
         return res
     elif comparator == '!=':
@@ -652,16 +656,15 @@ def add_cmp_var(var, comparator):
     elif comparator == '<=':
         return add_not(add_cmp_var(var, '>'))
     elif comparator == '>':
-        resname = uvar()
+        resname = indicator_uvar()
         be = const_lhs(0)
         ae = lin_lhs(var)
         add_gte(const_lhs(0), be - ae + dsmul(UPPER_BOUND, lin_lhs(resname)))
         add_lte(be - ae + dsmul(UPPER_BOUND, lin_lhs(resname)), const_lhs(UPPER_BOUND - 1))
         return resname
     elif comparator == '<':
-        fresh_var = uvar()
-        # v = lin_lhs(fresh_var)
-        add_eqc(lin_lhs(var), lin_lhs(fresh_var))
+        fresh_var = indicator_uvar()
+        add_eqc(dsmul(-1, lin_lhs(var)), lin_lhs(fresh_var))
         return add_cmp_var(fresh_var, '>')
     else:
         print('Error: Unsupported comparator', comparator)
@@ -698,6 +701,7 @@ def build_boolean_constraints(formula):
         add_eqc(lin_lhs(fv), lin_lhs(atom_true))
 
 build_equivalent_ilp(df.formula)
+
 print('evars')
 for e in expr_vars:
     print('\t', e, '->', expr_vars[e])
