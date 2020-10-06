@@ -441,7 +441,13 @@ class DConstraint:
         self.comp = comp
 
     def __repr__(self):
-        return parens(str(self.expr)) + ' + ' + parens(str(self.d)) + ' ' + self.comp + ' 0'
+        ss = []
+        if self.expr:
+            ss.append(str(self.expr))
+        if self.d:
+            ss.append(str(self.d))
+       
+        return ' + '.join(ss) + ' ' + self.comp + ' 0'
 
 class Connective:
 
@@ -492,3 +498,10 @@ df = ForallInPolyhedron(deps, dc)
 
 print('Resource constraints...')
 print(df)
+
+unum = 0
+def build_equivalent_ilp(formula):
+    print('\t', formula)
+    assert(False)
+
+build_equivalent_ilp(df.formula)
