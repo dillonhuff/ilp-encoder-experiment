@@ -564,11 +564,11 @@ print(df)
 global unum
 unum = 0
 
-def uvar():
+def uvar(prefix='v_'):
     global unum
     i = unum
     unum = unum + 1
-    return 'v_' + str(i)
+    return prefix + str(i)
 
 ilp_constraints = []
 expr_vars = {}
