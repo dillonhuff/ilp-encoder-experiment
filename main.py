@@ -428,10 +428,10 @@ class QuadraticForm:
         self.coeffs = args
 
     def __repr__(self):
-        s = '0'
+        mms = []
         for c in self.coeffs:
-            s += ' + ' + str(self.coeffs[c]) + '*' + c[0] + '*' + c[1]
-        return s
+            mms.append(str(self.coeffs[c]) + '*' + c[0] + '*' + c[1])
+        return ' + '.join(mms)
 
 class DConstraint:
 
