@@ -588,6 +588,12 @@ def lin_lhs(v):
 def const_lhs(v):
     return DLHS(zero_qf(), zero_lf(), v)
 
+def dsmul(k, ss):
+    return DLHS(ss.qf.smul(k), ss.lf.smul(k), ss.d*k)
+
+def add_eqc(a, b):
+    ilp_constraints.append(eqc(lin_lhs(a) + dsmul(-1, lin_lhs(b))))
+
 def add_not(to_neg):
     vname = uvar()
     v = lin_lhs(vname)
@@ -595,8 +601,6 @@ def add_not(to_neg):
     ilp_constraints.append(cs)
     return vname
 
-def dsmul(k, ss):
-    return DLHS(ss.qf.smul(k), ss.lf.smul(k), ss.d*k)
 
 def add_or(av, bv):
     ae = lin_lhs(av)
@@ -630,7 +634,15 @@ def build_boolean_constraints(formula):
             build_boolean_constraints(subf)
         if formula.name == '->':
             assert(len(formula.args) == 2)
-            add_or(add_not(fm_vars[formula.args[0]]), fm_vars[formula.args[1]])
+            res = add_or(add_not(fm_vars[formula.args[0]]), fm_vars[formula.args[1]])
+            add_eqc(res, fm_vars[formula])
+        else:
+            print('Error: Unrecognized connective in:', formula)
+            assert(False)
+    else:
+        assert(isinstance(formula, DConstraint))
+        fv = fm_vars[formula]
+        print('dc:', )
 
 build_equivalent_ilp(df.formula)
 print('evars')
