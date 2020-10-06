@@ -602,143 +602,137 @@ def uvar(prefix='v_'):
     unum = unum + 1
     return prefix + str(i)
 
-ilp_constraints = []
-expr_vars = {}
-fm_vars = {}
-
-def indicator_uvar():
-    v = uvar('I_')
-    ilp_constraints.append(lte(lin_lhs(v) - const_lhs(1)))
-    ilp_constraints.append(gte(lin_lhs(v)))
-    return v
-
-def add_gte(a, b):
-    ilp_constraints.append(gte((a) + dsmul(-1, (b))))
-
-def add_lte(a, b):
-    ilp_constraints.append(lte((a) + dsmul(-1, (b))))
-
-def add_eqc(a, b):
-    assert(isinstance(a, DLHS))
-    assert(isinstance(b, DLHS))
-    ilp_constraints.append(eqc((a) + dsmul(-1, (b))))
-
-def add_not(to_neg):
-    vname = indicator_uvar()
-    v = lin_lhs(vname)
-    cs = eqc(v + lin_lhs(to_neg))
-    ilp_constraints.append(cs)
-    return vname
-
-def add_and(av, bv):
-    ae = lin_lhs(av)
-    be = lin_lhs(bv)
-    two = const_lhs(2)
-    one = const_lhs(1)
-
-    varname = indicator_uvar()
-    v = lin_lhs(varname)
-
-    ilp_constraints.append(lte(ae + be + dsmul(-2, v) - one))
-    ilp_constraints.append(gte(ae + be + dsmul(-2, v)))
-    return varname
-
-def add_or(av, bv):
-    ae = lin_lhs(av)
-    be = lin_lhs(bv)
-    two = const_lhs(2)
-    one = const_lhs(1)
-
-    varname = indicator_uvar()
-    v = lin_lhs(varname)
-
-    ilp_constraints.append(gte(ae + be + dsmul(-2, v) + one))
-    ilp_constraints.append(lte(ae + be + dsmul(-2, v)))
-    return varname
-
 UPPER_BOUND = 99999
+class FormulaBuilder:
 
-def add_cmp_var(var, comparator):
-    if comparator == '=':
-        vare = lin_lhs(var)
-        res = add_and(add_cmp_var(var, '>='), add_cmp_var(var, '<='))
-        return res
-    elif comparator == '!=':
-        return add_not(add_cmp_var(var, '='))
-    elif comparator == '>=':
-        return add_not(add_cmp_var(var, '<'))
-    elif comparator == '<=':
-        return add_not(add_cmp_var(var, '>'))
-    elif comparator == '>':
-        resname = indicator_uvar()
-        be = const_lhs(0)
-        ae = lin_lhs(var)
-        add_gte(const_lhs(0), be - ae + dsmul(UPPER_BOUND, lin_lhs(resname)))
-        add_lte(be - ae + dsmul(UPPER_BOUND, lin_lhs(resname)), const_lhs(UPPER_BOUND - 1))
-        return resname
-    elif comparator == '<':
-        fresh_var = indicator_uvar()
-        add_eqc(dsmul(-1, lin_lhs(var)), lin_lhs(fresh_var))
-        return add_cmp_var(fresh_var, '>')
-    else:
-        print('Error: Unsupported comparator', comparator)
-        assert(False)
+    def __init__(self):
+        self.ilp_constraints = []
+        self.expr_vars = {}
+        self.fm_vars = {}
 
-def build_equivalent_ilp(formula):
-    print('\t', formula)
-    if isinstance(formula, Connective):
-        for subf in formula.args:
-            build_equivalent_ilp(subf)
+    def indicator_uvar(self):
+        v = uvar('I_')
+        self.ilp_constraints.append(lte(lin_lhs(v) - const_lhs(1)))
+        self.ilp_constraints.append(gte(lin_lhs(v)))
+        return v
 
-        fm_vars[formula] = uvar('FM_')
-    else:
-        assert(isinstance(formula, DConstraint))
-        expr_vars[formula.lhs] = uvar('EX_')
-        fm_vars[formula] = uvar('FM_')
+    def add_gte(self, a, b):
+        self.ilp_constraints.append(gte((a) + dsmul(-1, (b))))
 
-def build_boolean_constraints(formula):
-    print('\t', formula)
-    if isinstance(formula, Connective):
-        for subf in formula.args:
-            build_boolean_constraints(subf)
-        if formula.name == '->':
-            assert(len(formula.args) == 2)
-            res = add_or(add_not(fm_vars[formula.args[0]]), fm_vars[formula.args[1]])
-            add_eqc(lin_lhs(res), lin_lhs(fm_vars[formula]))
+    def add_lte(self, a, b):
+        self.ilp_constraints.append(lte((a) + dsmul(-1, (b))))
+
+    def add_eqc(self, a, b):
+        assert(isinstance(a, DLHS))
+        assert(isinstance(b, DLHS))
+        self.ilp_constraints.append(eqc((a) + dsmul(-1, (b))))
+
+    def add_not(self, to_neg):
+        vname = self.indicator_uvar()
+        v = lin_lhs(vname)
+        cs = eqc(v + lin_lhs(to_neg))
+        self.ilp_constraints.append(cs)
+        return vname
+
+    def add_and(self, av, bv):
+        ae = lin_lhs(av)
+        be = lin_lhs(bv)
+        two = const_lhs(2)
+        one = const_lhs(1)
+
+        varname = self.indicator_uvar()
+        v = lin_lhs(varname)
+
+        self.ilp_constraints.append(lte(ae + be + dsmul(-2, v) - one))
+        self.ilp_constraints.append(gte(ae + be + dsmul(-2, v)))
+        return varname
+
+    def add_or(self, av, bv):
+        ae = lin_lhs(av)
+        be = lin_lhs(bv)
+        two = const_lhs(2)
+        one = const_lhs(1)
+
+        varname = self.indicator_uvar()
+        v = lin_lhs(varname)
+
+        self.ilp_constraints.append(gte(ae + be + dsmul(-2, v) + one))
+        self.ilp_constraints.append(lte(ae + be + dsmul(-2, v)))
+        return varname
+
+
+    def add_cmp_var(self, var, comparator):
+        if comparator == '=':
+            vare = lin_lhs(var)
+            res = add_and(self.add_cmp_var(var, '>='), self.add_cmp_var(var, '<='))
+            return res
+        elif comparator == '!=':
+            return add_not(self.add_cmp_var(var, '='))
+        elif comparator == '>=':
+            return add_not(self.add_cmp_var(var, '<'))
+        elif comparator == '<=':
+            return add_not(self.add_cmp_var(var, '>'))
+        elif comparator == '>':
+            resname = self.indicator_uvar()
+            be = const_lhs(0)
+            ae = lin_lhs(var)
+            self.add_gte(const_lhs(0), be - ae + dsmul(UPPER_BOUND, lin_lhs(resname)))
+            self.add_lte(be - ae + dsmul(UPPER_BOUND, lin_lhs(resname)), const_lhs(UPPER_BOUND - 1))
+            return resname
+        elif comparator == '<':
+            fresh_var = self.indicator_uvar()
+            self.add_eqc(dsmul(-1, lin_lhs(var)), lin_lhs(fresh_var))
+            return self.add_cmp_var(fresh_var, '>')
         else:
-            print('Error: Unrecognized connective in:', formula)
+            print('Error: Unsupported comparator', comparator)
             assert(False)
-    else:
-        assert(isinstance(formula, DConstraint))
-        fv = fm_vars[formula]
-        atom_true = add_cmp_var(expr_vars[formula.lhs], formula.comp)
-        add_eqc(lin_lhs(fv), lin_lhs(atom_true))
 
-build_equivalent_ilp(df.formula)
+    def build_equivalent_ilp(self, formula):
+        print('\t', formula)
+        if isinstance(formula, Connective):
+            for subf in formula.args:
+                self.build_equivalent_ilp(subf)
 
-print('evars')
-for e in expr_vars:
-    print('\t', e, '->', expr_vars[e])
-print('')
-print('fvars')
-for e in fm_vars:
-    print('\t', e, '->', fm_vars[e])
+            self.fm_vars[formula] = uvar('FM_')
+        else:
+            assert(isinstance(formula, DConstraint))
+            self.expr_vars[formula.lhs] = uvar('EX_')
+            self.fm_vars[formula] = uvar('FM_')
 
-build_boolean_constraints(df.formula)
-for e in expr_vars:
-    ilp_constraints.append(eqc(e - lin_lhs(expr_vars[e])))
+    def build_boolean_constraints(self, formula):
+        print('\t', formula)
+        if isinstance(formula, Connective):
+            for subf in formula.args:
+                self.build_boolean_constraints(subf)
+            if formula.name == '->':
+                assert(len(formula.args) == 2)
+                res = add_or(add_not(self.fm_vars[formula.args[0]]), self.fm_vars[formula.args[1]])
+                self.ilp_constraints.append(eqc(lin_lhs(res) - lin_lhs(self.fm_vars[formula])))
+            else:
+                print('Error: Unrecognized connective in:', formula)
+                assert(False)
+        else:
+            assert(isinstance(formula, DConstraint))
+            fv = self.fm_vars[formula]
+            atom_true = self.add_cmp_var(self.expr_vars[formula.lhs], formula.comp)
+            self.ilp_constraints.append(eqc(lin_lhs(fv) - lin_lhs(atom_true)))
+
+fb = FormulaBuilder()
+fb.build_equivalent_ilp(df.formula)
+fb.build_boolean_constraints(df.formula)
+for e in fb.expr_vars:
+    fb.ilp_constraints.append(eqc(e - lin_lhs(fb.expr_vars[e])))
 
 builder = ILPBuilder()
 print('ILP constraints..')
-for c in ilp_constraints:
+for c in fb.ilp_constraints:
     print(c)
     for v in c.all_vars():
-        # print('\tall vars:', v)
         if not v in builder.variables:
             builder.add_int_var(v)
     builder.add_constraint(str(c))
 
-builder.add_constraint(fm_vars[df.formula] + ' = 1')
+builder.add_constraint(fb.fm_vars[df.formula] + ' = 1')
 
 sol = builder.solve()
 print('II solution...')
@@ -746,4 +740,4 @@ for s in sol:
     print('\t', s, '=', sol[s])
 
 assert(sol['a'] >= 1)
-assert(sol[fm_vars[df.formula]] == 1)
+assert(sol[fb.fm_vars[df.formula]] == 1)
