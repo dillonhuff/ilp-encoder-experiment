@@ -895,7 +895,22 @@ for c in df.formula.args:
         all_constraints.append(c)
 
 
+all_constraints.append(gte(lin_lhs('ii_c') - const_lhs(1)))
+all_constraints.append(gte(lin_lhs('ii_p') - const_lhs(1)))
 
+all_constraints.append(gte(lin_lhs('d_c')))
+all_constraints.append(gte(lin_lhs('d_p')))
+
+builder = ILPBuilder()
 print('Final Constraints...')
-for cp in all_constraints:
-    print('\t', cp)
+for c in all_constraints:
+    print(c)
+    for v in c.all_vars():
+        if not v in builder.variables:
+            builder.add_int_var(v)
+    builder.add_constraint(str(c))
+
+sol = builder.solve()
+print('Solution...')
+for s in sol:
+    print('\t', s, '->', sol[s])
