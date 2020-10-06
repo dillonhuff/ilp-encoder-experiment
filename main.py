@@ -402,6 +402,8 @@ class LinearForm:
         self.coeffs = args
 
     def __add__(self, other):
+        assert(isinstance(other, LinearForm))
+
         cfs = copy.deepcopy(self.coeffs)
         for c in copy.deepcopy(other.coeffs):
             if c in cfs:
@@ -470,6 +472,8 @@ def zero_lf():
 class DLHS:
 
     def __init__(self, qf, lf, d):
+        assert(isinstance(lf, LinearForm))
+
         self.qf = qf
         self.lf = lf
         self.d = d
@@ -541,6 +545,9 @@ class Connective:
             mms.append(str(m))
         return parens((' ' + self.name + ' ').join(mms))
 
+
+def linf_lhs(v):
+    return DLHS(zero_qf(), LinearForm(v), 0)
 
 def lin_lhs(v):
     return DLHS(zero_qf(), LinearForm({ v : 1}), 0)
@@ -841,9 +848,17 @@ for c in df.formula.args:
             fm = uvar('fm_')
             fms.append(fm)
             fcs.append(gte(lin_lhs(fm)))
+
         qf = c.lhs.qf
+
         lf = c.lhs.lf
         d = c.lhs.d
+
+        lamb_dot = {}
+        for i in range(num_multipliers):
+            lamb_dot[fms[i]] = df.polyhedron.b[i]
+        cst = linf_lhs(lamb_dot) + lin_lhs(fm0)
+        fcs.append(eqc(DLHS(zero_qf(), lf, 0) + const_lhs(d) - cst))
 
         print('Constraints...')
         for c in fcs:
