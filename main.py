@@ -606,7 +606,8 @@ UPPER_BOUND = 99999
 
 class FormulaBuilder:
 
-    def __init__(self):
+    def __init__(self, orig):
+        self.orig_c = orig
         self.ilp_constraints = []
         self.expr_vars = {}
         self.fm_vars = {}
@@ -664,20 +665,19 @@ class FormulaBuilder:
 
     def add_cmp_var(self, var, comparator):
         if comparator == '=':
-            vare = lin_lhs(var)
-            res = add_and(self.add_cmp_var(var, '>='), self.add_cmp_var(var, '<='))
+            res = self.add_and(self.add_cmp_var(var, '>='), self.add_cmp_var(var, '<='))
             return res
         elif comparator == '!=':
-            return add_not(self.add_cmp_var(var, '='))
+            return self.add_not(self.add_cmp_var(var, '='))
         elif comparator == '>=':
-            return add_not(self.add_cmp_var(var, '<'))
+            return self.add_not(self.add_cmp_var(var, '<'))
         elif comparator == '<=':
-            return add_not(self.add_cmp_var(var, '>'))
+            return self.add_not(self.add_cmp_var(var, '>'))
         elif comparator == '>':
             resname = self.indicator_uvar()
             be = const_lhs(0)
             ae = lin_lhs(var)
-            self.add_gte(const_lhs(0), be - ae + dsmul(UPPER_BOUND, lin_lhs(resname)))
+            self.add_gte(be - ae + dsmul(UPPER_BOUND, lin_lhs(resname)), const_lhs(0))
             self.add_lte(be - ae + dsmul(UPPER_BOUND, lin_lhs(resname)), const_lhs(UPPER_BOUND - 1))
             return resname
         elif comparator == '<':
@@ -707,7 +707,7 @@ class FormulaBuilder:
                 self.build_boolean_constraints(subf)
             if formula.name == '->':
                 assert(len(formula.args) == 2)
-                res = add_or(add_not(self.fm_vars[formula.args[0]]), self.fm_vars[formula.args[1]])
+                res = self.add_or(self.add_not(self.fm_vars[formula.args[0]]), self.fm_vars[formula.args[1]])
                 self.ilp_constraints.append(eqc(lin_lhs(res) - lin_lhs(self.fm_vars[formula])))
             else:
                 print('Error: Unrecognized connective in:', formula)
@@ -719,6 +719,11 @@ class FormulaBuilder:
             self.ilp_constraints.append(eqc(lin_lhs(fv) - lin_lhs(atom_true)))
 
     def solve(self):
+        fb.build_equivalent_ilp(self.orig_c)
+        fb.build_boolean_constraints(self.orig_c)
+        for e in fb.expr_vars:
+            fb.ilp_constraints.append(eqc(e - lin_lhs(fb.expr_vars[e])))
+
         builder = ILPBuilder()
         print('ILP constraints..')
         for c in fb.ilp_constraints:
@@ -728,21 +733,27 @@ class FormulaBuilder:
                     builder.add_int_var(v)
             builder.add_constraint(str(c))
 
-        builder.add_constraint(fb.fm_vars[df.formula] + ' = 1')
 
         sol = builder.solve()
         return sol
 
-fb = FormulaBuilder()
-fb.build_equivalent_ilp(df.formula)
-fb.build_boolean_constraints(df.formula)
-for e in fb.expr_vars:
-    fb.ilp_constraints.append(eqc(e - lin_lhs(fb.expr_vars[e])))
-
+dc = gtc(lin_lhs('a') - const_lhs(1))
+fb = FormulaBuilder(dc)
+fb.ilp_constraints.append(eqc(lin_lhs('a') - const_lhs(3)))
 sol = fb.solve()
 print('II solution...')
 for s in sol:
     print('\t', s, '=', sol[s])
 
 assert(sol['a'] >= 1)
-assert(sol[fb.fm_vars[df.formula]] == 1)
+assert(sol[fb.fm_vars[dc]] == 1)
+
+# dc = gtc(lin_lhs('a') - const_lhs(1))
+# fb = FormulaBuilder(dc)
+# sol = fb.solve()
+# print('II solution...')
+# for s in sol:
+    # print('\t', s, '=', sol[s])
+
+# assert(sol['a'] >= 1)
+# assert(sol[fb.fm_vars[dc]] == 1)
