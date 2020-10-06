@@ -449,6 +449,15 @@ class Connective:
         self.name = name
         self.args = args
 
+    def __repr__(self):
+        mms = []
+        for m in self.args:
+            mms.append(str(m))
+        return parens((' ' + self.name + ' ').join(mms))
+
+def implies_constraint(rc_ne, dc):
+    return Connective('->', [rc_ne, dc])
+
 class ForallInPolyhedron:
 
     def __init__(self, polyhedron, formula):
@@ -461,10 +470,25 @@ class ForallInPolyhedron:
 
 qf = QuadraticForm({('c', 'ii_c') : 1, ('p', 'ii_p') : -1})
 dc = DConstraint(qf, AffineForm(LinearForm({'d_c' : 1, 'd_p' : -1}), 1), '>=')
-
 df = ForallInPolyhedron(deps, dc)
+
+print('Data dependencies...')
 print(df)
 
+deps = Polyhedron()
+deps.add_constraint({'c' : 1}, 0)
+deps.add_constraint({'c' : -1}, 10)
 
+deps.add_constraint({'p' : 1}, 0)
+deps.add_constraint({'p' : -1}, 10)
 
+qf = QuadraticForm({('c', 'ii_c') : 1, ('p', 'ii_p') : -1})
+dc = DConstraint(qf, AffineForm(LinearForm({'d_c' : 1, 'd_p' : -1}), 0), '!=')
 
+rc_ne = DConstraint(None, AffineForm(LinearForm({'r_c' : 1, 'r_p' : -1}), 0), '=')
+
+dc = implies_constraint(rc_ne, dc)
+df = ForallInPolyhedron(deps, dc)
+
+print('Resource constraints...')
+print(df)
