@@ -262,6 +262,14 @@ class Polyhedron:
         self.A = []
         self.b = []
 
+    def all_vars(self):
+        vs = []
+        for c in self.A:
+            for v in c:
+                if not v in vs:
+                    vs.append(v)
+        return vs
+
     def add_constraint(self, a, b):
         self.A.append(a);
         self.b.append(b)
@@ -466,6 +474,18 @@ class DLHS:
         self.lf = lf
         self.d = d
 
+    def all_vars(self):
+        vs = []
+        for e in self.qf.coeffs:
+            if not e[0] in vs:
+                vs.append(e[0])
+            if not e[1] in vs:
+                vs.append(e[1])
+        for e in self.lf.coeffs:
+            if not e in vs:
+                vs.append(e)
+        return vs
+
     def __sub__(self, other):
         return self + dsmul(-1, other)
 
@@ -495,14 +515,7 @@ class DConstraint:
         return str(self.lhs) + ' ' + self.comp + ' 0'
 
     def all_vars(self):
-        vs = []
-        for e in self.lhs.qf.coeffs:
-            if not e in vs:
-                vs.append(e)
-        for e in self.lhs.lf.coeffs:
-            if not e in vs:
-                vs.append(e)
-        return vs
+        return self.lhs.all_vars()
 
 def gtc(expr):
     return DConstraint(expr, '>')
@@ -537,6 +550,7 @@ def const_lhs(v):
 
 def dsmul(k, ss):
     return DLHS(ss.qf.smul(k), ss.lf.smul(k), ss.d*k)
+
 def implies_constraint(rc_ne, dc):
     return Connective('->', [rc_ne, dc])
 
@@ -680,11 +694,14 @@ class FormulaBuilder:
             atom_true = self.add_cmp_var(self.expr_vars[formula.lhs], formula.comp)
             self.ilp_constraints.append(eqc(lin_lhs(fv) - lin_lhs(atom_true)))
 
+    def populate_ilp_constraints(self):
+        self.build_equivalent_ilp(self.orig_c)
+        self.build_boolean_constraints(self.orig_c)
+        for e in self.expr_vars:
+            self.ilp_constraints.append(eqc(e - lin_lhs(self.expr_vars[e])))
+
     def solve(self):
-        fb.build_equivalent_ilp(self.orig_c)
-        fb.build_boolean_constraints(self.orig_c)
-        for e in fb.expr_vars:
-            fb.ilp_constraints.append(eqc(e - lin_lhs(fb.expr_vars[e])))
+        self.populate_ilp_constraints()
 
         builder = ILPBuilder()
         print('ILP constraints..')
@@ -797,9 +814,40 @@ print('Resource constraints...')
 print(df)
 
 fb = FormulaBuilder(dc)
-fb.ilp_constraints.append(eqc(lin_lhs('a') - const_lhs(7)))
-sol = fb.solve()
-print('II solution...')
-for s in sol:
-    print('\t', s, '=', sol[s])
+fb.populate_ilp_constraints()
+# The formula must be true
+fb.ilp_constraints.append(eqc(lin_lhs(fb.fm_vars[dc]) - const_lhs(1)))
+df.formula = Connective('^', fb.ilp_constraints)
+
+print('Pre-farkas constraints...')
+farkas_vars = df.polyhedron.all_vars()
+for c in df.formula.args:
+    apply_farkas = False
+    print('\t', c)
+    for v in c.lhs.all_vars():
+        print('\t\t', v)
+        if v in farkas_vars:
+            print('\t\tMust have farkas applied')
+            apply_farkas = True
+            break
+    if apply_farkas:
+        fcs = []
+        fm0 = uvar('fm_')
+        fcs.append(gte(lin_lhs(fm0)))
+
+        num_multipliers = df.polyhedron.num_constraints()
+        fms = []
+        for i in range(num_multipliers):
+            fm = uvar('fm_')
+            fms.append(fm)
+            fcs.append(gte(lin_lhs(fm)))
+        qf = c.lhs.qf
+        lf = c.lhs.lf
+        d = c.lhs.d
+
+        print('Constraints...')
+        for c in fcs:
+            print('\t', c)
+        assert(False)
+
 
