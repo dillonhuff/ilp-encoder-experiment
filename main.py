@@ -639,7 +639,6 @@ class FormulaBuilder:
     def add_and(self, av, bv):
         ae = lin_lhs(av)
         be = lin_lhs(bv)
-        two = const_lhs(2)
         one = const_lhs(1)
 
         varname = self.indicator_uvar()
@@ -650,9 +649,10 @@ class FormulaBuilder:
         return varname
 
     def add_or(self, av, bv):
+        assert(False)
+
         ae = lin_lhs(av)
         be = lin_lhs(bv)
-        two = const_lhs(2)
         one = const_lhs(1)
 
         varname = self.indicator_uvar()
@@ -781,3 +781,25 @@ for s in sol:
 
 assert(sol['a'] == 1)
 assert(sol[fb.fm_vars[dc]] == 1)
+
+dc = eqc(lin_lhs('a') - const_lhs(1))
+fb = FormulaBuilder(dc)
+fb.ilp_constraints.append(eqc(lin_lhs('a') - const_lhs(1)))
+sol = fb.solve()
+print('II solution...')
+for s in sol:
+    print('\t', s, '=', sol[s])
+
+assert(sol['a'] == 1)
+assert(sol[fb.fm_vars[dc]] == 1)
+
+dc = eqc(lin_lhs('a') - const_lhs(1))
+fb = FormulaBuilder(dc)
+fb.ilp_constraints.append(eqc(lin_lhs('a') - const_lhs(7)))
+sol = fb.solve()
+print('II solution...')
+for s in sol:
+    print('\t', s, '=', sol[s])
+
+assert(sol['a'] == 7)
+assert(sol[fb.fm_vars[dc]] == 0)
