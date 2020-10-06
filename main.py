@@ -481,11 +481,10 @@ class DLHS:
         self.lf = lf
         self.d = d
 
+    def __sub__(self, other):
+        return self - dsmul(-1, other)
+
     def __add__(self, other):
-        print(type(self.lf))
-        print(type(other.lf))
-        print(type(self.d))
-        print(type(other.d))
         return DLHS(self.qf + other.qf, self.lf + other.lf, self.d + other.d)
 
     def __repr__(self):
@@ -602,6 +601,19 @@ def add_not(to_neg):
     return vname
 
 
+def add_and(av, bv):
+    ae = lin_lhs(av)
+    be = lin_lhs(bv)
+    two = const_lhs(2)
+    one = const_lhs(1)
+
+    varname = uvar()
+    v = lin_lhs(varname)
+
+    ilp_constraints.append(lte(ae + be + dsmul(-2, v) - one))
+    ilp_constraints.append(gte(ae + be + dsmul(-2, v)))
+    return varname
+
 def add_or(av, bv):
     ae = lin_lhs(av)
     be = lin_lhs(bv)
@@ -614,6 +626,20 @@ def add_or(av, bv):
     ilp_constraints.append(gte(ae + be + dsmul(-2, v) + one))
     ilp_constraints.append(lte(ae + be + dsmul(-2, v)))
     return varname
+
+def add_cmp_var(var, comparator):
+    if comparator == '=':
+        vare = lin_lhs(var)
+        resname = uvar()
+        res = add_and(add_cmp_var(var, '>='), add_cmp_var(var, '<='))
+        return res
+    elif comparator == '>=':
+        return add_not(add_cmp_var(var, '<'))
+    elif comparator == '<':
+        assert(False)
+    else:
+        print('Error: Unsupported comparator', comparator)
+        assert(False)
 
 def build_equivalent_ilp(formula):
     print('\t', formula)
@@ -642,7 +668,8 @@ def build_boolean_constraints(formula):
     else:
         assert(isinstance(formula, DConstraint))
         fv = fm_vars[formula]
-        print('dc:', )
+        atom_true = add_cmp_var(expr_vars[formula.lhs], formula.comp)
+        add_eqc(fv, atom_true)
 
 build_equivalent_ilp(df.formula)
 print('evars')
