@@ -433,21 +433,34 @@ class QuadraticForm:
             mms.append(str(self.coeffs[c]) + '*' + c[0] + '*' + c[1])
         return ' + '.join(mms)
 
-class DConstraint:
+class DLHS:
 
-    def __init__(self, expr, d, comp):
-        self.expr = expr
+    def __init__(self, qf, lf, d):
+        self.qf = qf
+        self.lf = lf
         self.d = d
-        self.comp = comp
 
     def __repr__(self):
         ss = []
-        if self.expr:
-            ss.append(str(self.expr))
+        if self.qf:
+            ss.append(str(self.qf))
+        if self.lf:
+            ss.append(str(self.lf))
         if self.d:
             ss.append(str(self.d))
-       
-        return ' + '.join(ss) + ' ' + self.comp + ' 0'
+        if len(ss) == 0:
+            return '0'
+
+        return ' + '.join(ss)
+
+class DConstraint:
+
+    def __init__(self, lhs, comp):
+        self.lhs = lhs
+        self.comp = comp
+
+    def __repr__(self):
+        return str(self.lhs) + ' ' + self.comp + ' 0'
 
 class Connective:
 
@@ -475,7 +488,8 @@ class ForallInPolyhedron:
         return s
 
 qf = QuadraticForm({('c', 'ii_c') : 1, ('p', 'ii_p') : -1})
-dc = DConstraint(qf, AffineForm(LinearForm({'d_c' : 1, 'd_p' : -1}), 1), '>=')
+# dc = DConstraint(qf, AffineForm(LinearForm({'d_c' : 1, 'd_p' : -1}), 1), '>=')
+dc = DConstraint(DLHS(qf, LinearForm({'d_c' : 1, 'd_p' : -1}), 1), '>=')
 df = ForallInPolyhedron(deps, dc)
 
 print('Data dependencies...')
@@ -489,9 +503,9 @@ deps.add_constraint({'p' : 1}, 0)
 deps.add_constraint({'p' : -1}, 10)
 
 qf = QuadraticForm({('c', 'ii_c') : 1, ('p', 'ii_p') : -1})
-dc = DConstraint(qf, AffineForm(LinearForm({'d_c' : 1, 'd_p' : -1}), 0), '!=')
+dc = DConstraint(DLHS(qf, LinearForm({'d_c' : 1, 'd_p' : -1}), 0), '!=')
 
-rc_ne = DConstraint(None, AffineForm(LinearForm({'r_c' : 1, 'r_p' : -1}), 0), '=')
+rc_ne = DConstraint(DLHS(None, LinearForm({'r_c' : 1, 'r_p' : -1}), 0), '=')
 
 dc = implies_constraint(rc_ne, dc)
 df = ForallInPolyhedron(deps, dc)
@@ -499,7 +513,16 @@ df = ForallInPolyhedron(deps, dc)
 print('Resource constraints...')
 print(df)
 
+global unum
 unum = 0
+
+def uvar():
+    global unum
+    i = unum
+    unum = unum + 1
+    return 'v_' + str(i)
+
+ilp_constraints = []
 expr_vars = {}
 fm_vars = {}
 def build_equivalent_ilp(formula):
@@ -511,5 +534,9 @@ def build_equivalent_ilp(formula):
         print(formula.name)
     else:
         assert(isinstance(formula, DConstraint))
+        expr_vars[uvar()] = formula.lhs
 
 build_equivalent_ilp(df.formula)
+print('evars')
+for e in expr_vars:
+    print('\t', e, '->', expr_vars[e])
