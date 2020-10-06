@@ -603,6 +603,7 @@ def uvar(prefix='v_'):
     return prefix + str(i)
 
 UPPER_BOUND = 99999
+
 class FormulaBuilder:
 
     def __init__(self):
@@ -717,24 +718,28 @@ class FormulaBuilder:
             atom_true = self.add_cmp_var(self.expr_vars[formula.lhs], formula.comp)
             self.ilp_constraints.append(eqc(lin_lhs(fv) - lin_lhs(atom_true)))
 
+    def solve(self):
+        builder = ILPBuilder()
+        print('ILP constraints..')
+        for c in fb.ilp_constraints:
+            print(c)
+            for v in c.all_vars():
+                if not v in builder.variables:
+                    builder.add_int_var(v)
+            builder.add_constraint(str(c))
+
+        builder.add_constraint(fb.fm_vars[df.formula] + ' = 1')
+
+        sol = builder.solve()
+        return sol
+
 fb = FormulaBuilder()
 fb.build_equivalent_ilp(df.formula)
 fb.build_boolean_constraints(df.formula)
 for e in fb.expr_vars:
     fb.ilp_constraints.append(eqc(e - lin_lhs(fb.expr_vars[e])))
 
-builder = ILPBuilder()
-print('ILP constraints..')
-for c in fb.ilp_constraints:
-    print(c)
-    for v in c.all_vars():
-        if not v in builder.variables:
-            builder.add_int_var(v)
-    builder.add_constraint(str(c))
-
-builder.add_constraint(fb.fm_vars[df.formula] + ' = 1')
-
-sol = builder.solve()
+sol = fb.solve()
 print('II solution...')
 for s in sol:
     print('\t', s, '=', sol[s])
