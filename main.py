@@ -439,6 +439,24 @@ class QuadraticForm:
     def __init__(self, args):
         self.coeffs = args
 
+    def collect_linear_form(self, var):
+        fm = {}
+        for c in self.coeffs:
+            if c[0] == var:
+                assert(c[1] != var)
+                if var in fm:
+                    fm[c[1]] = fm[c[1]] + self.coeffs[c]
+                else:
+                    fm[c[1]] = self.coeffs[c]
+            if c[1] == var:
+                assert(c[0] != var)
+                if var in fm:
+                    fm[c[0]] = fm[c[0]] + self.coeffs[c]
+                else:
+                    fm[c[0]] = self.coeffs[c]
+
+        return LinearForm(fm)
+
     def smul(self, k):
         cfs = {}
         for c in copy.deepcopy(self.coeffs):
@@ -850,10 +868,18 @@ for c in df.formula.args:
             fcs.append(gte(lin_lhs(fm)))
 
         qf = c.lhs.qf
+        for v in df.polyhedron.all_vars():
+            print('\t', v)
+            lf = qf.collect_linear_form(v)
+            fcoeffs = {}
+            for j in range(num_multipliers):
+                fmj = fms[j]
+                Aji = df.polyhedron.coeff(j, v)
+                fcoeffs[fmj] = Aji
+            fcs.append(eqc(DLHS(zero_qf(), lf, 0) - linf_lhs(fcoeffs)))
 
         lf = c.lhs.lf
         d = c.lhs.d
-
         lamb_dot = {}
         for i in range(num_multipliers):
             lamb_dot[fms[i]] = df.polyhedron.b[i]
