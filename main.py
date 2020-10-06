@@ -407,11 +407,20 @@ class LinearForm:
     def __init__(self, args):
         self.coeffs = args
 
+    def __repr__(self):
+        mms = []
+        for c in self.coeffs:
+            mms.append(str(self.coeffs[c]) + '*' + str(c))
+        return ' + '.join(mms)
+
 class AffineForm:
 
     def __init__(self, lexpr, d):
         self.expr = lexpr
         self.d = d
+
+    def __repr__(self):
+        return str(self.expr) + ' + ' + str(self.d)
 
 class QuadraticForm:
 
@@ -430,6 +439,9 @@ class DConstraint:
         self.expr = expr
         self.d = d
         self.comp = comp
+
+    def __repr__(self):
+        return str(self.expr) + ' + ' + str(self.d) + ' ' + self.comp + ' 0'
 
 class Connective:
 
@@ -450,5 +462,5 @@ class ForallInPolyhedron:
 qf = QuadraticForm({('c', 'ii_c') : 1, ('p', 'ii_p') : -1})
 dc = DConstraint(qf, AffineForm(LinearForm({'d_c' : 1, 'd_p' : -1}), 1), '>=')
 
-df = ForallInPolyhedron(deps, QuadraticForm({('c', 'ii_c') : 1, ('p', 'ii_p') : -1}))
+df = ForallInPolyhedron(deps, dc)
 print(df)
