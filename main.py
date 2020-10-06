@@ -746,3 +746,4 @@ for s in sol:
     print('\t', s, '=', sol[s])
 
 assert(sol['a'] >= 1)
+assert(sol[fm_vars[df.formula]] == 1)
