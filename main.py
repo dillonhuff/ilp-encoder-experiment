@@ -330,23 +330,6 @@ def add_farkas_constraints(fs, fc, domain, build):
     build.add_constraint_eqz(cst)
     return constraints
 
-# builder = ILPBuilder()
-# builder.add_int_var('ii_c', 1, 100)
-# builder.add_int_var('d_c', 0, 100)
-
-# builder.add_constraint(Constraint(parse_poly('1*ii_c*c + 1*d_c + -1*20'), '>='))
-
-# deps = Polyhedron()
-# deps.add_constraint({'c' : 1}, 0)
-# deps.add_constraint({'c' : -1}, 10)
-
-# fs = { 'c' : 'ii_c'}
-# fc = 'd_c + -20'
-
-# add_farkas_constraints(fs, fc, deps, builder)
-# sol = builder.solve()
-# assert(len(sol) > 0)
-
 # Checking farkas constraints
 builder = ILPBuilder()
 builder.add_int_var('ii_c', 1, 100)
@@ -574,25 +557,6 @@ df = ForallInPolyhedron(deps, dc)
 print('Data dependencies...')
 print(df)
 
-deps = Polyhedron()
-deps.add_constraint({'c' : 1}, 0)
-deps.add_constraint({'c' : -1}, 10)
-
-deps.add_constraint({'p' : 1}, 0)
-deps.add_constraint({'p' : -1}, 10)
-
-qf = QuadraticForm({('c', 'ii_c') : 1, ('p', 'ii_p') : -1})
-dc = DConstraint(DLHS(qf, LinearForm({'d_c' : 1, 'd_p' : -1}), 0), '!=')
-
-rc_ne = DConstraint(DLHS(zero_qf(), LinearForm({'r_c' : 1, 'r_p' : -1}), 0), '=')
-
-# dc = implies_constraint(rc_ne, dc)
-dc = gtc(lin_lhs('a') - const_lhs(1))
-df = ForallInPolyhedron(deps, dc)
-
-print('Resource constraints...')
-print(df)
-
 global unum
 unum = 0
 
@@ -649,8 +613,6 @@ class FormulaBuilder:
         return varname
 
     def add_or(self, av, bv):
-        assert(False)
-
         ae = lin_lhs(av)
         be = lin_lhs(bv)
         one = const_lhs(1)
@@ -814,3 +776,30 @@ for s in sol:
 
 assert(sol['a'] == 7)
 assert(sol[fb.fm_vars[dc]] == 0)
+
+
+deps = Polyhedron()
+deps.add_constraint({'c' : 1}, 0)
+deps.add_constraint({'c' : -1}, 10)
+
+deps.add_constraint({'p' : 1}, 0)
+deps.add_constraint({'p' : -1}, 10)
+
+qf = QuadraticForm({('c', 'ii_c') : 1, ('p', 'ii_p') : -1})
+dc = DConstraint(DLHS(qf, LinearForm({'d_c' : 1, 'd_p' : -1}), 0), '!=')
+
+rc_ne = DConstraint(DLHS(zero_qf(), LinearForm({'r_c' : 1, 'r_p' : -1}), 0), '=')
+
+dc = implies_constraint(rc_ne, dc)
+df = ForallInPolyhedron(deps, dc)
+
+print('Resource constraints...')
+print(df)
+
+fb = FormulaBuilder(dc)
+fb.ilp_constraints.append(eqc(lin_lhs('a') - const_lhs(7)))
+sol = fb.solve()
+print('II solution...')
+for s in sol:
+    print('\t', s, '=', sol[s])
+
