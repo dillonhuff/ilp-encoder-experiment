@@ -681,7 +681,7 @@ class FormulaBuilder:
             self.add_lte(be - ae + dsmul(UPPER_BOUND, lin_lhs(resname)), const_lhs(UPPER_BOUND - 1))
             return resname
         elif comparator == '<':
-            fresh_var = self.indicator_uvar()
+            fresh_var = uvar()
             self.add_eqc(dsmul(-1, lin_lhs(var)), lin_lhs(fresh_var))
             return self.add_cmp_var(fresh_var, '>')
         else:
@@ -745,8 +745,19 @@ print('II solution...')
 for s in sol:
     print('\t', s, '=', sol[s])
 
-assert(sol['a'] >= 1)
+assert(sol['a'] > 1)
 assert(sol[fb.fm_vars[dc]] == 1)
+
+dc = gtc(lin_lhs('a') - const_lhs(1))
+fb = FormulaBuilder(dc)
+fb.ilp_constraints.append(eqc(lin_lhs('a') - const_lhs(-7)))
+sol = fb.solve()
+print('II solution...')
+for s in sol:
+    print('\t', s, '=', sol[s])
+
+assert(sol['a'] == -7)
+assert(sol[fb.fm_vars[dc]] == 0)
 
 dc = gtc(lin_lhs('a') - const_lhs(1))
 fb = FormulaBuilder(dc)
@@ -795,11 +806,11 @@ assert(sol[fb.fm_vars[dc]] == 1)
 
 dc = eqc(lin_lhs('a') - const_lhs(1))
 fb = FormulaBuilder(dc)
-fb.ilp_constraints.append(eqc(lin_lhs('a') - const_lhs(0)))
+fb.ilp_constraints.append(eqc(lin_lhs('a') - const_lhs(7)))
 sol = fb.solve()
 print('II solution...')
 for s in sol:
     print('\t', s, '=', sol[s])
 
-assert(sol['a'] == 0)
+assert(sol['a'] == 7)
 assert(sol[fb.fm_vars[dc]] == 0)
