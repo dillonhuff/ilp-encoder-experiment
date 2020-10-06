@@ -846,6 +846,8 @@ df.formula = Connective('^', fb.ilp_constraints)
 
 print('Pre-farkas constraints...')
 farkas_vars = df.polyhedron.all_vars()
+
+all_constraints = []
 for c in df.formula.args:
     apply_farkas = False
     print('\t', c)
@@ -886,9 +888,14 @@ for c in df.formula.args:
         cst = linf_lhs(lamb_dot) + lin_lhs(fm0)
         fcs.append(eqc(DLHS(zero_qf(), lf, 0) + const_lhs(d) - cst))
 
-        print('Constraints...')
-        for c in fcs:
-            print('\t', c)
-        assert(False)
+        for cp in fcs:
+            print('\t', cp)
+            all_constraints.append(cp)
+    else:
+        all_constraints.append(c)
 
 
+
+print('Final Constraints...')
+for cp in all_constraints:
+    print('\t', cp)
