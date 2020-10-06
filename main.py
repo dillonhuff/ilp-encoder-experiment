@@ -795,11 +795,11 @@ assert(sol[fb.fm_vars[dc]] == 1)
 
 dc = eqc(lin_lhs('a') - const_lhs(1))
 fb = FormulaBuilder(dc)
-fb.ilp_constraints.append(eqc(lin_lhs('a') - const_lhs(7)))
+fb.ilp_constraints.append(eqc(lin_lhs('a') - const_lhs(0)))
 sol = fb.solve()
 print('II solution...')
 for s in sol:
     print('\t', s, '=', sol[s])
 
-assert(sol['a'] == 7)
+assert(sol['a'] == 0)
 assert(sol[fb.fm_vars[dc]] == 0)
