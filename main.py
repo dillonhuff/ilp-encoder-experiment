@@ -632,7 +632,7 @@ class FormulaBuilder:
     def add_not(self, to_neg):
         vname = self.indicator_uvar()
         v = lin_lhs(vname)
-        cs = eqc(v + lin_lhs(to_neg))
+        cs = eqc(v - (const_lhs(1) - lin_lhs(to_neg)))
         self.ilp_constraints.append(cs)
         return vname
 
@@ -759,12 +759,25 @@ for s in sol:
 assert(sol['a'] == -1)
 assert(sol[fb.fm_vars[dc]] == 0)
 
-# dc = gtc(lin_lhs('a') - const_lhs(1))
-# fb = FormulaBuilder(dc)
-# sol = fb.solve()
-# print('II solution...')
-# for s in sol:
-    # print('\t', s, '=', sol[s])
+dc = gtc(lin_lhs('a') - const_lhs(1))
+fb = FormulaBuilder(dc)
+fb.ilp_constraints.append(eqc(lin_lhs('a') - const_lhs(1)))
+sol = fb.solve()
+print('II solution...')
+for s in sol:
+    print('\t', s, '=', sol[s])
 
-# assert(sol['a'] >= 1)
-# assert(sol[fb.fm_vars[dc]] == 1)
+assert(sol['a'] == 1)
+assert(sol[fb.fm_vars[dc]] == 0)
+
+
+dc = gte(lin_lhs('a') - const_lhs(1))
+fb = FormulaBuilder(dc)
+fb.ilp_constraints.append(eqc(lin_lhs('a') - const_lhs(1)))
+sol = fb.solve()
+print('II solution...')
+for s in sol:
+    print('\t', s, '=', sol[s])
+
+assert(sol['a'] == 1)
+assert(sol[fb.fm_vars[dc]] == 1)
