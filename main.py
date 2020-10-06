@@ -422,7 +422,7 @@ class LinearForm:
     def smul(self, k):
         cfs = {}
         for c in copy.deepcopy(self.coeffs):
-            print('coeff:', c)
+            # print('coeff:', c)
             cfs[c] = k*self.coeffs[c]
         return LinearForm(cfs)
 
@@ -511,6 +511,28 @@ class DConstraint:
     def __repr__(self):
         return str(self.lhs) + ' ' + self.comp + ' 0'
 
+    def all_vars(self):
+        vs = []
+        for e in self.lhs.qf.coeffs:
+            if not e in vs:
+                vs.append(e)
+        for e in self.lhs.lf.coeffs:
+            if not e in vs:
+                vs.append(e)
+        return vs
+
+def gtc(expr):
+    return DConstraint(expr, '>')
+
+def eqc(expr):
+    return DConstraint(expr, '=')
+
+def lte(expr):
+    return DConstraint(expr, '<=')
+
+def gte(expr):
+    return DConstraint(expr, '>=')
+
 class Connective:
 
     def __init__(self, name, args):
@@ -523,6 +545,15 @@ class Connective:
             mms.append(str(m))
         return parens((' ' + self.name + ' ').join(mms))
 
+
+def lin_lhs(v):
+    return DLHS(zero_qf(), LinearForm({ v : 1}), 0)
+
+def const_lhs(v):
+    return DLHS(zero_qf(), zero_lf(), v)
+
+def dsmul(k, ss):
+    return DLHS(ss.qf.smul(k), ss.lf.smul(k), ss.d*k)
 def implies_constraint(rc_ne, dc):
     return Connective('->', [rc_ne, dc])
 
@@ -555,7 +586,8 @@ dc = DConstraint(DLHS(qf, LinearForm({'d_c' : 1, 'd_p' : -1}), 0), '!=')
 
 rc_ne = DConstraint(DLHS(zero_qf(), LinearForm({'r_c' : 1, 'r_p' : -1}), 0), '=')
 
-dc = implies_constraint(rc_ne, dc)
+# dc = implies_constraint(rc_ne, dc)
+dc = gtc(lin_lhs('a') - const_lhs(1))
 df = ForallInPolyhedron(deps, dc)
 
 print('Resource constraints...')
@@ -574,29 +606,11 @@ ilp_constraints = []
 expr_vars = {}
 fm_vars = {}
 
-def eqc(expr):
-    return DConstraint(expr, '=')
-
-def lte(expr):
-    return DConstraint(expr, '<=')
-
-def gte(expr):
-    return DConstraint(expr, '>=')
-
 def indicator_uvar():
     v = uvar('I_')
     ilp_constraints.append(lte(lin_lhs(v) - const_lhs(1)))
     ilp_constraints.append(gte(lin_lhs(v)))
     return v
-
-def lin_lhs(v):
-    return DLHS(zero_qf(), LinearForm({ v : 1}), 0)
-
-def const_lhs(v):
-    return DLHS(zero_qf(), zero_lf(), v)
-
-def dsmul(k, ss):
-    return DLHS(ss.qf.smul(k), ss.lf.smul(k), ss.d*k)
 
 def add_gte(a, b):
     ilp_constraints.append(gte((a) + dsmul(-1, (b))))
@@ -712,9 +726,21 @@ for e in fm_vars:
 
 build_boolean_constraints(df.formula)
 
+builder = ILPBuilder()
 print('ILP constraints..')
 for c in ilp_constraints:
     print(c)
+    for v in c.all_vars():
+        # print('\tall vars:', v)
+        if not v in builder.variables:
+            builder.add_int_var(v)
+    builder.add_constraint(str(c))
 
+builder.add_constraint(fm_vars[df.formula] + ' = 1')
 
+sol = builder.solve()
+print('II solution...')
+for s in sol:
+    print('\t', s, '=', sol[s])
 
+assert(sol['a'] == 1)
