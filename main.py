@@ -441,7 +441,7 @@ class DConstraint:
         self.comp = comp
 
     def __repr__(self):
-        return str(self.expr) + ' + ' + str(self.d) + ' ' + self.comp + ' 0'
+        return parens(str(self.expr)) + ' + ' + parens(str(self.d)) + ' ' + self.comp + ' 0'
 
 class Connective:
 
@@ -464,3 +464,7 @@ dc = DConstraint(qf, AffineForm(LinearForm({'d_c' : 1, 'd_p' : -1}), 1), '>=')
 
 df = ForallInPolyhedron(deps, dc)
 print(df)
+
+
+
+
