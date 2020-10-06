@@ -525,6 +525,7 @@ def uvar():
 ilp_constraints = []
 expr_vars = {}
 fm_vars = {}
+
 def build_equivalent_ilp(formula):
     print('\t', formula)
     if isinstance(formula, Connective):
@@ -540,3 +541,5 @@ build_equivalent_ilp(df.formula)
 print('evars')
 for e in expr_vars:
     print('\t', e, '->', expr_vars[e])
+
+
