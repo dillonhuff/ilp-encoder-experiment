@@ -584,7 +584,7 @@ def gte(expr):
     return DConstraint(expr, '>=')
 
 def indicator_uvar():
-    v = uvar()
+    v = uvar('I_')
     ilp_constraints.append(lte(lin_lhs(v) - const_lhs(1)))
     ilp_constraints.append(gte(lin_lhs(v)))
     return v
@@ -676,11 +676,11 @@ def build_equivalent_ilp(formula):
         for subf in formula.args:
             build_equivalent_ilp(subf)
 
-        fm_vars[formula] = uvar()
+        fm_vars[formula] = uvar('FM_')
     else:
         assert(isinstance(formula, DConstraint))
-        expr_vars[formula.lhs] = uvar()
-        fm_vars[formula] = uvar()
+        expr_vars[formula.lhs] = uvar('EX_')
+        fm_vars[formula] = uvar('FM_')
 
 def build_boolean_constraints(formula):
     print('\t', formula)
